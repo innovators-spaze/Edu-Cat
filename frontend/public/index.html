@@ -476,6 +476,7 @@ function popBubble(el, cb) {
 // ── Auth state ────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, user => {
   currentUser = user;
+  if (user) showHome();
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
