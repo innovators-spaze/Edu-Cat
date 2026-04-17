@@ -161,6 +161,34 @@ body {
 .auth-input:focus { border-color: var(--purple); }
 .auth-error { color: #ef4444; font-size: 0.85rem; text-align: center; min-height: 18px; }
 .auth-btn { width: 100%; font-size: 1.2rem; padding: 16px; }
+.google-btn {
+  width: 100%;
+  font-size: 1rem;
+  padding: 14px;
+  background: white;
+  color: #444;
+  border: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.google-btn:hover { background: #f9fafb; transform: translateY(-2px); }
+.auth-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
 .auth-switch { font-size: 0.9rem; color: #6b7280; }
 .link-btn {
   background: none; border: none; color: var(--purple);

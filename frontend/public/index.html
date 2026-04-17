@@ -8,7 +8,7 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut }
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -23,6 +23,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 const API = 'http://localhost:3000/api';
 let currentUser = null;
@@ -74,6 +75,8 @@ window.submitAuth = async function() {
   const pass = document.getElementById('auth-pass').value;
   const errEl = document.getElementById('auth-error');
   errEl.textContent = '';
+  if (!email) { errEl.textContent = 'Please enter your email!'; return; }
+  if (!pass)  { errEl.textContent = 'Please enter your password!'; return; }
   try {
     if (title === 'Register') {
       if (!name) { errEl.textContent = 'Please enter your name!'; return; }
@@ -86,7 +89,25 @@ window.submitAuth = async function() {
     }
     showHome();
   } catch(e) {
-    errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+    const msg = e.code === 'auth/invalid-credential' ? 'Invalid email or password.' :
+                e.code === 'auth/email-already-in-use' ? 'Email already registered.' :
+                e.code === 'auth/weak-password' ? 'Password must be at least 6 characters.' :
+                e.code === 'auth/invalid-email' ? 'Invalid email address.' :
+                e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+    errEl.textContent = msg;
+  }
+};
+
+window.googleAuth = async function() {
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  try {
+    const cred = await signInWithPopup(auth, googleProvider);
+    currentUser = cred.user;
+    showHome();
+  } catch(e) {
+    errEl.textContent = e.code === 'auth/popup-closed-by-user' ? 'Google sign-in was cancelled.' :
+                        e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
   }
 };
 
@@ -499,6 +520,10 @@ window.addEventListener('load', playSplash);
       <input id="auth-pass" class="auth-input" type="password" placeholder="Password 🔒"/>
       <div id="auth-error" class="auth-error"></div>
       <button class="bubble auth-btn" id="auth-submit" onclick="submitAuth()">Login 🚀</button>
+      <div class="auth-divider"><span>or</span></div>
+      <button class="bubble google-btn" onclick="googleAuth()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"/> Continue with Google
+      </button>
       <div class="auth-switch">
         <span id="auth-switch-text">Don't have an account?</span>
         <button class="link-btn" id="auth-switch-btn" onclick="switchAuthMode()">Register</button>
