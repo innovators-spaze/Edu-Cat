@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Edu-Cat</title>
+<link rel="stylesheet" href="style.css"/>
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// 🔴 REPLACE with your Firebase project config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+const API = 'http://localhost:3000/api';
+let currentUser = null;
+let currentChapter = 0, currentLevel = 1, currentQIndex = 0;
+let questions = [], score = 0;
+let selectedAnswers = {};
+
+// ── Screens ──────────────────────────────────────────────────────────────────
+const screens = {};
+['splash','auth','home','chapters','levels','game','trace','pictorial'].forEach(id => {
+  screens[id] = document.getElementById('screen-' + id);
+});
+
+function showScreen(id) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[id].classList.add('active');
+}
+
+// ── Splash ───────────────────────────────────────────────────────────────────
+function playSplash() {
+  showScreen('splash');
+  const meow = document.getElementById('meow-audio');
+  meow.play().catch(()=>{});
+  setTimeout(() => {
+    document.getElementById('splash-cat').classList.add('bounce');
+    document.getElementById('splash-title').classList.add('pop-in');
+  }, 300);
+  setTimeout(() => {
+    if (!currentUser) showScreen('auth');
+    else showHome();
+  }, 3500);
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+window.switchAuthMode = function() {
+  const isLogin = document.getElementById('auth-title').textContent === 'Login';
+  document.getElementById('auth-title').textContent = isLogin ? 'Register' : 'Login';
+  document.getElementById('auth-name-wrap').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('auth-submit').textContent = isLogin ? 'Register 🎉' : 'Login 🚀';
+  document.getElementById('auth-switch-text').textContent = isLogin ? 'Already have an account?' : "Don't have an account?";
+  document.getElementById('auth-switch-btn').textContent = isLogin ? 'Login' : 'Register';
+  document.getElementById('auth-error').textContent = '';
+};
+
+window.submitAuth = async function() {
+  const title = document.getElementById('auth-title').textContent;
+  const name = document.getElementById('auth-name').value.trim();
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  try {
+    if (title === 'Register') {
+      if (!name) { errEl.textContent = 'Please enter your name!'; return; }
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      currentUser = cred.user;
+    } else {
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      currentUser = cred.user;
+    }
+    showHome();
+  } catch(e) {
+    errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+  }
+};
+
+// ── Home ─────────────────────────────────────────────────────────────────────
+function showHome() {
+  document.getElementById('home-name').textContent =
+    currentUser?.displayName || currentUser?.email || 'Friend';
+  showScreen('home');
+}
+
+window.goToChapters = function() {
+  popBubble(event.currentTarget, () => showScreen('chapters'));
+};
+
+window.logout = async function() {
+  await signOut(auth);
+  currentUser = null;
+  showScreen('auth');
+};
+
+// ── Chapters ─────────────────────────────────────────────────────────────────
+window.selectChapter = function(ch) {
+  currentChapter = ch;
+  popBubble(event.currentTarget, () => showLevels());
+};
+
+function showLevels() {
+  const grid = document.getElementById('levels-grid');
+  grid.innerHTML = '';
+  document.getElementById('levels-title').textContent =
+    `Chapter ${currentChapter} — Pick a Level`;
+  for (let i = 1; i <= 30; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'bubble level-btn';
+    btn.textContent = i;
+    btn.onclick = (e) => { currentLevel = i; popBubble(e.currentTarget, startLevel); };
+    grid.appendChild(btn);
+  }
+  showScreen('levels');
+}
+
+// ── Start Level ───────────────────────────────────────────────────────────────
+async function startLevel() {
+  score = 0; currentQIndex = 0; selectedAnswers = {};
+  const res = await fetch(`${API}/questions/${currentChapter}/${currentLevel}`);
+  const data = await res.json();
+  questions = data.questions;
+  if (currentChapter === 2) renderTrace();
+  else if (currentChapter === 3) renderPictorial();
+  else renderGame();
+}
+
+// ── Chapter 1 Game ────────────────────────────────────────────────────────────
+function renderGame() {
+  showScreen('game');
+  const q = questions[currentQIndex];
+  document.getElementById('game-progress').textContent =
+    `Level ${currentLevel} · Q ${currentQIndex + 1}/10`;
+  document.getElementById('game-area').innerHTML = buildGameQ(q);
+}
+
+function buildGameQ(q) {
+  if (q.type === 'sound_from_letter') {
+    return `
+      <div class="q-label">Which sound does this letter make?</div>
+      <div class="big-letter">${q.letter}${q.letter.toLowerCase()}</div>
+      <div class="options-grid">
+        ${q.options.map(opt => `
+          <button class="bubble opt-btn" onclick="selectOpt(this,'${opt}','${q.correct}')">
+            <span class="speaker-icon">🔊</span>
+            <span class="opt-letter">${opt}${opt.toLowerCase()}</span>
+          </button>`).join('')}
+      </div>`;
+  }
+  if (q.type === 'letter_from_sound') {
+    return `
+      <div class="q-label">Hear the sound and pick the correct letter!</div>
+      <button class="bubble play-btn" onclick="speakLetter('${q.letter}')">🔊 Play Sound</button>
+      <div class="options-grid">
+        ${q.options.map(opt => `
+          <button class="bubble opt-btn" onclick="selectOpt(this,'${opt}','${q.correct}')">
+            ${opt}${opt.toLowerCase()}
+          </button>`).join('')}
+      </div>`;
+  }
+  if (q.type === 'match_letter_sound') {
+    return `
+      <div class="q-label">Match each letter to its sound!</div>
+      <div class="match-table">
+        <div class="match-col">
+          ${q.pairs.map(l => `<div class="match-letter bubble">${l}${l.toLowerCase()}</div>`).join('')}
+        </div>
+        <div class="match-col">
+          ${q.pairs.map(l => `
+            <button class="bubble match-sound" data-letter="${l}" onclick="speakLetter('${l}')">
+              🔊
+            </button>`).join('')}
+        </div>
+      </div>
+      <button class="bubble submit-btn" onclick="submitMatch()">Submit ✅</button>`;
+  }
+  return '';
+}
+
+window.speakLetter = function(letter) {
+  const u = new SpeechSynthesisUtterance(letter);
+  u.rate = 0.8; u.pitch = 1.2;
+  speechSynthesis.speak(u);
+};
+
+window.selectOpt = function(btn, chosen, correct) {
+  document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    score++;
+    showFeedback(true);
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.opt-btn').forEach(b => {
+      if (b.querySelector('.opt-letter')?.textContent.startsWith(correct) ||
+          b.textContent.trim().startsWith(correct)) b.classList.add('correct');
+    });
+    showFeedback(false);
+  }
+};
+
+window.submitMatch = function() { score++; showFeedback(true); };
+
+// ── Chapter 2 Trace ───────────────────────────────────────────────────────────
+function renderTrace() {
+  showScreen('trace');
+  const q = questions[currentQIndex];
+  document.getElementById('trace-progress').textContent =
+    `Level ${currentLevel} · Q ${currentQIndex + 1}/10`;
+  document.getElementById('trace-letter-bg').textContent = q.letter;
+  const canvas = document.getElementById('trace-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  setupTraceCanvas(canvas, ctx);
+}
+
+function setupTraceCanvas(canvas, ctx) {
+  ctx.strokeStyle = '#ff6b9d';
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  let drawing = false;
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  };
+
+  canvas.onmousedown = canvas.ontouchstart = (e) => {
+    e.preventDefault(); drawing = true;
+    const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  };
+  canvas.onmousemove = canvas.ontouchmove = (e) => {
+    e.preventDefault(); if (!drawing) return;
+    const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke();
+  };
+  canvas.onmouseup = canvas.ontouchend = () => { drawing = false; };
+}
+
+window.submitTrace = function() { score++; showFeedback(true); };
+window.clearTrace = function() {
+  const canvas = document.getElementById('trace-canvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+};
+
+// ── Chapter 3 Pictorial ───────────────────────────────────────────────────────
+let picAnswer = [];
+let picWord = '';
+
+function renderPictorial() {
+  showScreen('pictorial');
+  const q = questions[currentQIndex];
+  picWord = q.word;
+  picAnswer = Array(q.word.length).fill('');
+
+  // Pre-fill hint letters
+  if (q.hint && q.hint.length) {
+    q.hint.forEach(i => { picAnswer[i] = q.word[i]; });
+  }
+
+  document.getElementById('pic-progress').textContent =
+    `Level ${currentLevel} · Q ${currentQIndex + 1}/10`;
+
+  // Image
+  const imgEl = document.getElementById('pic-image');
+  imgEl.src = `images/${q.img}.png`;
+  imgEl.onerror = () => { imgEl.src = ''; imgEl.alt = q.word; };
+  imgEl.onclick = () => speakWord(q.word);
+
+  // Blank boxes
+  const boxesEl = document.getElementById('pic-boxes');
+  boxesEl.innerHTML = q.word.split('').map((ch, i) => {
+    const filled = picAnswer[i];
+    return `<div class="pic-box ${filled ? 'filled hint' : ''}" id="pbox-${i}"
+      data-idx="${i}" onclick="boxClick(${i})">${filled || ''}</div>`;
+  }).join('');
+
+  // Jumbled letters (exclude hint letters)
+  const usedIndices = q.hint || [];
+  const available = q.jumbled.filter((_, i) => !usedIndices.includes(i));
+  const lettersEl = document.getElementById('pic-letters');
+  lettersEl.innerHTML = available.map((ch, i) =>
+    `<button class="bubble pic-letter-btn" id="plbtn-${i}" onclick="letterClick(this,'${ch}')">${ch}</button>`
+  ).join('');
+}
+
+window.speakWord = function(word) {
+  const u = new SpeechSynthesisUtterance(word);
+  u.rate = 0.7; u.pitch = 1.3;
+  speechSynthesis.speak(u);
+};
+
+let selectedBox = -1;
+window.boxClick = function(idx) {
+  if (document.getElementById(`pbox-${idx}`)?.classList.contains('hint')) return;
+  document.querySelectorAll('.pic-box').forEach(b => b.classList.remove('selected'));
+  selectedBox = idx;
+  document.getElementById(`pbox-${idx}`)?.classList.add('selected');
+};
+
+window.letterClick = function(btn, ch) {
+  if (selectedBox === -1) {
+    // auto-fill next empty box
+    const empty = picAnswer.findIndex((v, i) => !v &&
+      !document.getElementById(`pbox-${i}`)?.classList.contains('hint'));
+    if (empty === -1) return;
+    selectedBox = empty;
+  }
+  const box = document.getElementById(`pbox-${selectedBox}`);
+  if (!box || box.classList.contains('hint')) return;
+  // Return previous letter to pool if box had one
+  const prev = picAnswer[selectedBox];
+  if (prev) {
+    document.querySelectorAll('.pic-letter-btn').forEach(b => {
+      if (b.textContent === prev && b.disabled) { b.disabled = false; b.style.opacity = '1'; }
+    });
+  }
+  picAnswer[selectedBox] = ch;
+  box.textContent = ch;
+  box.classList.add('filled');
+  btn.disabled = true; btn.style.opacity = '0.3';
+  selectedBox = -1;
+  document.querySelectorAll('.pic-box').forEach(b => b.classList.remove('selected'));
+};
+
+window.submitPic = function() {
+  const ans = picAnswer.join('');
+  if (ans === picWord) { score++; showFeedback(true); }
+  else showFeedback(false);
+};
+
+// ── Feedback (Candy / Water) ──────────────────────────────────────────────────
+function showFeedback(correct) {
+  const overlay = document.getElementById('feedback-overlay');
+  overlay.className = 'feedback-overlay ' + (correct ? 'correct' : 'wrong');
+  overlay.innerHTML = correct ? buildCandy() : buildWater();
+  overlay.style.display = 'flex';
+
+  if (correct) {
+    const u = new SpeechSynthesisUtterance('Awesome!');
+    u.pitch = 1.5; u.rate = 0.9; speechSynthesis.speak(u);
+  } else {
+    const u = new SpeechSynthesisUtterance('Wrong! Try again!');
+    u.pitch = 0.8; u.rate = 0.9; speechSynthesis.speak(u);
+  }
+}
+
+function buildCandy() {
+  let html = '<div class="feedback-msg awesome-msg">🎉 Awesome! 🎉</div><div class="candy-shower">';
+  const emojis = ['🍬','🍭','🍫','🍡','🍩','🌟','⭐','✨','🎊','🎈'];
+  for (let i = 0; i < 30; i++) {
+    const e = emojis[Math.floor(Math.random() * emojis.length)];
+    const left = Math.random() * 100;
+    const delay = Math.random() * 1.5;
+    const dur = 1.5 + Math.random();
+    html += `<span class="candy" style="left:${left}%;animation-delay:${delay}s;animation-duration:${dur}s">${e}</span>`;
+  }
+  html += '</div>';
+  html += buildNavBtns();
+  return html;
+}
+
+function buildWater() {
+  let html = '<div class="water-scene">';
+  html += '<div class="water-surface"></div>';
+  for (let i = 0; i < 12; i++) {
+    const left = Math.random() * 90;
+    const delay = Math.random() * 2;
+    const size = 20 + Math.random() * 30;
+    html += `<div class="bubble-water" style="left:${left}%;animation-delay:${delay}s;width:${size}px;height:${size}px"></div>`;
+  }
+  html += '<div class="wrong-text">Wrong! 😢</div>';
+  html += '</div>';
+  html += buildNavBtns();
+  return html;
+}
+
+function buildNavBtns() {
+  return `
+    <div class="nav-btns">
+      ${currentQIndex > 0 ? `<button class="bubble nav-btn" onclick="navQ(-1)">◀ Previous</button>` : ''}
+      <button class="bubble nav-btn close-btn" onclick="closeFeedback()">Next ▶</button>
+    </div>`;
+}
+
+window.closeFeedback = function() {
+  document.getElementById('feedback-overlay').style.display = 'none';
+  currentQIndex++;
+  if (currentQIndex >= questions.length) finishLevel();
+  else {
+    if (currentChapter === 2) renderTrace();
+    else if (currentChapter === 3) renderPictorial();
+    else renderGame();
+  }
+};
+
+window.navQ = function(dir) {
+  document.getElementById('feedback-overlay').style.display = 'none';
+  currentQIndex = Math.max(0, currentQIndex + dir);
+  if (currentChapter === 2) renderTrace();
+  else if (currentChapter === 3) renderPictorial();
+  else renderGame();
+};
+
+async function finishLevel() {
+  if (currentUser) {
+    await fetch(`${API}/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: currentUser.uid,
+        chapter: currentChapter,
+        level: currentLevel,
+        score,
+        completed: true
+      })
+    }).catch(()=>{});
+  }
+  const overlay = document.getElementById('feedback-overlay');
+  overlay.className = 'feedback-overlay correct';
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="feedback-msg awesome-msg">🏆 Level Complete!<br>Score: ${score}/10</div>
+    ${buildCandy()}
+    <div class="nav-btns">
+      <button class="bubble nav-btn" onclick="document.getElementById('feedback-overlay').style.display='none';showLevels()">
+        🗂 Levels
+      </button>
+      ${currentLevel < 30 ? `<button class="bubble nav-btn" onclick="document.getElementById('feedback-overlay').style.display='none';currentLevel++;startLevel()">Next Level ▶</button>` : ''}
+    </div>`;
+}
+
+// ── Bubble pop animation ──────────────────────────────────────────────────────
+function popBubble(el, cb) {
+  el.classList.add('popping');
+  const pop = document.getElementById('pop-audio');
+  pop.currentTime = 0; pop.play().catch(()=>{});
+  setTimeout(() => { el.classList.remove('popping'); if (cb) cb(); }, 350);
+}
+
+// ── Auth state ────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', playSplash);
+</script>
+</head>
+<body>
+
+<!-- Audio -->
+<audio id="meow-audio" src="sounds/meow.mp3" preload="auto"></audio>
+<audio id="pop-audio" src="sounds/pop.mp3" preload="auto"></audio>
+
+<!-- Feedback Overlay -->
+<div id="feedback-overlay" class="feedback-overlay" style="display:none"></div>
+
+<!-- ── SPLASH ── -->
+<div id="screen-splash" class="screen active">
+  <div class="splash-bg">
+    <div class="star" style="top:10%;left:15%;animation-delay:0s">⭐</div>
+    <div class="star" style="top:20%;left:80%;animation-delay:0.5s">🌟</div>
+    <div class="star" style="top:70%;left:10%;animation-delay:1s">✨</div>
+    <div class="star" style="top:60%;left:85%;animation-delay:0.3s">⭐</div>
+    <div class="star" style="top:85%;left:50%;animation-delay:0.8s">🌟</div>
+    <img id="splash-cat" src="images/cat.png" alt="cat" class="splash-cat" onerror="this.textContent='🐱';this.style.fontSize='120px'"/>
+    <div id="splash-title" class="splash-title">
+      <span class="title-e">E</span><span class="title-d">d</span><span class="title-u">u</span><span class="title-dash">-</span><span class="title-c">C</span><span class="title-a">a</span><span class="title-t">t</span>
+    </div>
+    <div class="splash-sub">Learn & Play 🐱</div>
+  </div>
+</div>
+
+<!-- ── AUTH ── -->
+<div id="screen-auth" class="screen">
+  <div class="auth-bg">
+    <div class="auth-card">
+      <div class="auth-emoji">🎓</div>
+      <h2 id="auth-title">Login</h2>
+      <div id="auth-name-wrap" style="display:none">
+        <input id="auth-name" class="auth-input" type="text" placeholder="Your Name 😊"/>
+      </div>
+      <input id="auth-email" class="auth-input" type="email" placeholder="Email 📧"/>
+      <input id="auth-pass" class="auth-input" type="password" placeholder="Password 🔒"/>
+      <div id="auth-error" class="auth-error"></div>
+      <button class="bubble auth-btn" id="auth-submit" onclick="submitAuth()">Login 🚀</button>
+      <div class="auth-switch">
+        <span id="auth-switch-text">Don't have an account?</span>
+        <button class="link-btn" id="auth-switch-btn" onclick="switchAuthMode()">Register</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOME ── -->
+<div id="screen-home" class="screen">
+  <div class="home-bg">
+    <div class="home-header">
+      <span class="home-wave">👋</span>
+      <span>Hello, <strong id="home-name"></strong>!</span>
+      <button class="bubble logout-btn" onclick="logout()">Logout</button>
+    </div>
+    <div class="home-center">
+      <div class="home-logo">🐱 Edu-Cat</div>
+      <div class="home-mascot">🐱</div>
+      <button class="bubble start-btn" onclick="goToChapters(event)">▶ START</button>
+    </div>
+    <div class="floating-letters">
+      <span style="--d:0s">A</span><span style="--d:0.3s">B</span>
+      <span style="--d:0.6s">C</span><span style="--d:0.9s">D</span>
+      <span style="--d:1.2s">E</span><span style="--d:1.5s">F</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHAPTERS ── -->
+<div id="screen-chapters" class="screen">
+  <div class="page-bg">
+    <h2 class="page-title">Choose a Chapter 📚</h2>
+    <div class="chapters-grid">
+      <button class="bubble chapter-btn ch1" onclick="selectChapter(1)">
+        <div class="ch-icon">🔤</div>
+        <div class="ch-name">Chapter 1</div>
+        <div class="ch-sub">Phonics</div>
+      </button>
+      <button class="bubble chapter-btn ch2" onclick="selectChapter(2)">
+        <div class="ch-icon">✏️</div>
+        <div class="ch-name">Chapter 2</div>
+        <div class="ch-sub">Trace</div>
+      </button>
+      <button class="bubble chapter-btn ch3" onclick="selectChapter(3)">
+        <div class="ch-icon">🖼️</div>
+        <div class="ch-name">Chapter 3</div>
+        <div class="ch-sub">Pictorial</div>
+      </button>
+    </div>
+    <button class="bubble back-btn" onclick="showScreen('home')">◀ Back</button>
+  </div>
+</div>
+
+<!-- ── LEVELS ── -->
+<div id="screen-levels" class="screen">
+  <div class="page-bg">
+    <h2 class="page-title" id="levels-title">Pick a Level</h2>
+    <div id="levels-grid" class="levels-grid"></div>
+    <button class="bubble back-btn" onclick="showScreen('chapters')">◀ Back</button>
+  </div>
+</div>
+
+<!-- ── GAME (Chapter 1) ── -->
+<div id="screen-game" class="screen">
+  <div class="page-bg">
+    <div id="game-progress" class="progress-bar"></div>
+    <div id="game-area" class="game-area"></div>
+    <button class="bubble back-btn" onclick="showLevels()">◀ Levels</button>
+  </div>
+</div>
+
+<!-- ── TRACE (Chapter 2) ── -->
+<div id="screen-trace" class="screen">
+  <div class="page-bg">
+    <div id="trace-progress" class="progress-bar"></div>
+    <div class="trace-container">
+      <div id="trace-letter-bg" class="trace-letter-bg"></div>
+      <canvas id="trace-canvas" width="280" height="280" class="trace-canvas"></canvas>
+    </div>
+    <div class="trace-btns">
+      <button class="bubble" onclick="clearTrace()">🗑 Clear</button>
+      <button class="bubble submit-btn" onclick="submitTrace()">✅ Done</button>
+    </div>
+    <button class="bubble back-btn" onclick="showLevels()">◀ Levels</button>
+  </div>
+</div>
+
+<!-- ── PICTORIAL (Chapter 3) ── -->
+<div id="screen-pictorial" class="screen">
+  <div class="page-bg">
+    <div id="pic-progress" class="progress-bar"></div>
+    <img id="pic-image" class="pic-image" alt="picture" onclick="speakWord(picWord)"/>
+    <div class="pic-tap-hint">👆 Tap image to hear!</div>
+    <div id="pic-boxes" class="pic-boxes"></div>
+    <div id="pic-letters" class="pic-letters"></div>
+    <button class="bubble submit-btn" onclick="submitPic()">✅ Submit</button>
+    <button class="bubble back-btn" onclick="showLevels()">◀ Levels</button>
+  </div>
+</div>
+
+</body>
+</html>
