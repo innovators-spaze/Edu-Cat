@@ -1,9 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "frontend/public/**", "use": "@vercel/static" }
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "routes": [
-    { "src": "/(.*)", "dest": "frontend/public/$1" }
-  ]
+  "functions": {
+    "api/index.js": { "memory": 512, "maxDuration": 10 }
+  }
 }
