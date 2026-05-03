@@ -26,6 +26,30 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 const API = 'http://localhost:3000/api';
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playMeow() {
+  const osc = AC.createOscillator(), gain = AC.createGain();
+  osc.connect(gain); gain.connect(AC.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(900, AC.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, AC.currentTime + 0.4);
+  gain.gain.setValueAtTime(0.4, AC.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.5);
+  osc.start(); osc.stop(AC.currentTime + 0.5);
+}
+
+function playPop() {
+  const osc = AC.createOscillator(), gain = AC.createGain();
+  osc.connect(gain); gain.connect(AC.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600, AC.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, AC.currentTime + 0.08);
+  gain.gain.setValueAtTime(0.5, AC.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.1);
+  osc.start(); osc.stop(AC.currentTime + 0.1);
+}
+
 let currentUser = null;
 let splashTimer = null;
 let currentChapter = 0, currentLevel = 1, currentQIndex = 0;
@@ -46,7 +70,7 @@ function showScreen(id) {
 // ── Splash ───────────────────────────────────────────────────────────────────
 function playSplash() {
   showScreen('splash');
-  document.getElementById('meow-audio').play().catch(()=>{});
+  playMeow();
   setTimeout(() => {
     document.getElementById('splash-cat').classList.add('bounce');
     document.getElementById('splash-title').classList.add('pop-in');
@@ -533,8 +557,7 @@ async function finishLevel() {
 // ── Bubble pop animation ──────────────────────────────────────────────────────
 function popBubble(el, cb) {
   el.classList.add('popping');
-  const pop = document.getElementById('pop-audio');
-  pop.currentTime = 0; pop.play().catch(()=>{});
+  playPop();
   setTimeout(() => { el.classList.remove('popping'); if (cb) cb(); }, 350);
 }
 
@@ -579,9 +602,7 @@ window.addEventListener('load', async () => {
 </head>
 <body>
 
-<!-- Audio -->
-<audio id="meow-audio" src="sounds/meow.mp3" preload="auto"></audio>
-<audio id="pop-audio" src="sounds/pop.mp3" preload="auto"></audio>
+<!-- Audio via Web Audio API -->
 
 <!-- Feedback Overlay -->
 <div id="feedback-overlay" class="feedback-overlay" style="display:none"></div>
