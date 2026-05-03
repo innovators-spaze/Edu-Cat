@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Question } from '../types';
 import Feedback from './Feedback';
 
-const API = 'http://localhost:3000/api';
+const API = '/api';
 
 interface Props {
   chapter: number;
