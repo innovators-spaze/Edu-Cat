@@ -234,45 +234,112 @@ function selectOpt(btn, chosen, correct) {
 function submitMatch() { score++; showFeedback(true); }
 
 // ── Chapter 2 Trace ───────────────────────────────────────────────────────────
+let traceHasDrawn = false;
+
 function renderTrace() {
   showScreen('trace');
+  traceHasDrawn = false;
   const q = questions[currentQIndex];
+  const letter = q.letter;
   document.getElementById('trace-progress').textContent =
     `Level ${currentLevel} · Q ${currentQIndex + 1}/10`;
-  document.getElementById('trace-letter-bg').textContent = q.letter;
+  document.getElementById('trace-letter-label').textContent =
+    `Trace the letter: ${letter}`;
+
   const canvas = document.getElementById('trace-canvas');
+  const W = canvas.width, H = canvas.height;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw dotted guide letter
+  ctx.save();
+  ctx.font = `bold ${W * 0.72}px 'Comic Sans MS', cursive`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.setLineDash([8, 10]);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(168,85,247,0.35)';
+  ctx.fillStyle = 'rgba(168,85,247,0.07)';
+  ctx.fillText(letter, W / 2, H / 2);
+  ctx.strokeText(letter, W / 2, H / 2);
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Draw start arrow hint
+  drawStartArrow(ctx, W, H);
+
   setupTraceCanvas(canvas, ctx);
 }
 
+function drawStartArrow(ctx, W, H) {
+  // Small animated arrow at top-left of letter area
+  ctx.save();
+  ctx.fillStyle = 'rgba(251,191,36,0.85)';
+  ctx.font = '28px serif';
+  ctx.fillText('👆 Start here', W * 0.08, H * 0.14);
+  ctx.restore();
+}
+
 function setupTraceCanvas(canvas, ctx) {
+  // Snapshot the guide so we can redraw it on clear
+  const guideSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
   ctx.strokeStyle = '#ff6b9d';
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 9;
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   let drawing = false;
 
   const getPos = (e) => {
     const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
     const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
+    return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
   };
+
+  canvas._guide = guideSnapshot;
 
   canvas.onmousedown = canvas.ontouchstart = (e) => {
-    e.preventDefault(); drawing = true;
-    const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    e.preventDefault();
+    drawing = true;
+    traceHasDrawn = true;
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
   };
   canvas.onmousemove = canvas.ontouchmove = (e) => {
-    e.preventDefault(); if (!drawing) return;
-    const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke();
+    e.preventDefault();
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
   };
-  canvas.onmouseup = canvas.ontouchend = () => { drawing = false; };
+  canvas.onmouseup = canvas.ontouchend = (e) => {
+    drawing = false;
+    ctx.beginPath(); // reset path so next stroke is fresh
+  };
 }
 
-function submitTrace() { score++; showFeedback(true); }
+function submitTrace() {
+  if (!traceHasDrawn) {
+    document.getElementById('trace-letter-label').textContent = '✏️ Please trace the letter first!';
+    document.getElementById('trace-letter-label').style.color = '#ef4444';
+    return;
+  }
+  score++;
+  showFeedback(true);
+}
+
 function clearTrace() {
   const canvas = document.getElementById('trace-canvas');
-  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (canvas._guide) ctx.putImageData(canvas._guide, 0, 0);
+  traceHasDrawn = false;
+  const lbl = document.getElementById('trace-letter-label');
+  lbl.style.color = '';
+  lbl.textContent = `Trace the letter: ${questions[currentQIndex].letter}`;
 }
 
 // ── Chapter 3 Pictorial ───────────────────────────────────────────────────────
@@ -622,12 +689,12 @@ window.addEventListener('load', async () => {
 <div id="screen-trace" class="screen">
   <div class="page-bg">
     <div id="trace-progress" class="progress-bar"></div>
+    <div id="trace-letter-label" class="trace-letter-label">Trace the letter</div>
     <div class="trace-container">
-      <div id="trace-letter-bg" class="trace-letter-bg"></div>
-      <canvas id="trace-canvas" width="280" height="280" class="trace-canvas"></canvas>
+      <canvas id="trace-canvas" width="300" height="300" class="trace-canvas"></canvas>
     </div>
     <div class="trace-btns">
-      <button class="bubble" onclick="clearTrace()">🗑 Clear</button>
+      <button class="bubble trace-clear-btn" onclick="clearTrace()">🗑 Clear</button>
       <button class="bubble submit-btn" onclick="submitTrace()">✅ Done</button>
     </div>
     <button class="bubble back-btn" onclick="showLevels()">◀ Levels</button>
