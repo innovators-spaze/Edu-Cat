@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "phonics-fun-frontend",
+  "builds": [
+    {
+      "src": "frontend/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "frontend/public/index.html"
+    }
+  ]
+}

@@ -6,9 +6,9 @@
 <title>Edu-Cat</title>
 <link rel="stylesheet" href="style.css"/>
 <!-- Firebase SDK -->
-<script type="module">
+<script type="module" id="main-script">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup }
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -58,7 +58,7 @@ function playSplash() {
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
-window.switchAuthMode = function() {
+function switchAuthMode() {
   const isLogin = document.getElementById('auth-title').textContent === 'Login';
   document.getElementById('auth-title').textContent = isLogin ? 'Register' : 'Login';
   document.getElementById('auth-name-wrap').style.display = isLogin ? 'block' : 'none';
@@ -66,9 +66,9 @@ window.switchAuthMode = function() {
   document.getElementById('auth-switch-text').textContent = isLogin ? 'Already have an account?' : "Don't have an account?";
   document.getElementById('auth-switch-btn').textContent = isLogin ? 'Login' : 'Register';
   document.getElementById('auth-error').textContent = '';
-};
+}
 
-window.submitAuth = async function() {
+async function submitAuth() {
   const title = document.getElementById('auth-title').textContent;
   const name = document.getElementById('auth-name').value.trim();
   const email = document.getElementById('auth-email').value.trim();
@@ -96,20 +96,17 @@ window.submitAuth = async function() {
                 e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
     errEl.textContent = msg;
   }
-};
+}
 
-window.googleAuth = async function() {
+async function googleAuth() {
   const errEl = document.getElementById('auth-error');
-  errEl.textContent = '';
+  errEl.textContent = 'Redirecting to Google...';
   try {
-    const cred = await signInWithPopup(auth, googleProvider);
-    currentUser = cred.user;
-    showHome();
+    await signInWithRedirect(auth, googleProvider);
   } catch(e) {
-    errEl.textContent = e.code === 'auth/popup-closed-by-user' ? 'Google sign-in was cancelled.' :
-                        e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+    errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
   }
-};
+}
 
 // ── Home ─────────────────────────────────────────────────────────────────────
 function showHome() {
@@ -118,21 +115,21 @@ function showHome() {
   showScreen('home');
 }
 
-window.goToChapters = function() {
-  popBubble(event.currentTarget, () => showScreen('chapters'));
-};
+function goToChapters(e) {
+  popBubble(e.currentTarget, () => showScreen('chapters'));
+}
 
-window.logout = async function() {
+async function logout() {
   await signOut(auth);
   currentUser = null;
   showScreen('auth');
-};
+}
 
 // ── Chapters ─────────────────────────────────────────────────────────────────
-window.selectChapter = function(ch) {
+function selectChapter(ch, e) {
   currentChapter = ch;
-  popBubble(event.currentTarget, () => showLevels());
-};
+  popBubble(e.currentTarget, () => showLevels());
+}
 
 function showLevels() {
   const grid = document.getElementById('levels-grid');
@@ -212,13 +209,13 @@ function buildGameQ(q) {
   return '';
 }
 
-window.speakLetter = function(letter) {
+function speakLetter(letter) {
   const u = new SpeechSynthesisUtterance(letter);
   u.rate = 0.8; u.pitch = 1.2;
   speechSynthesis.speak(u);
-};
+}
 
-window.selectOpt = function(btn, chosen, correct) {
+function selectOpt(btn, chosen, correct) {
   document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
   if (chosen === correct) {
     btn.classList.add('correct');
@@ -232,9 +229,9 @@ window.selectOpt = function(btn, chosen, correct) {
     });
     showFeedback(false);
   }
-};
+}
 
-window.submitMatch = function() { score++; showFeedback(true); };
+function submitMatch() { score++; showFeedback(true); }
 
 // ── Chapter 2 Trace ───────────────────────────────────────────────────────────
 function renderTrace() {
@@ -272,11 +269,11 @@ function setupTraceCanvas(canvas, ctx) {
   canvas.onmouseup = canvas.ontouchend = () => { drawing = false; };
 }
 
-window.submitTrace = function() { score++; showFeedback(true); };
-window.clearTrace = function() {
+function submitTrace() { score++; showFeedback(true); }
+function clearTrace() {
   const canvas = document.getElementById('trace-canvas');
   canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-};
+}
 
 // ── Chapter 3 Pictorial ───────────────────────────────────────────────────────
 let picAnswer = [];
@@ -319,21 +316,21 @@ function renderPictorial() {
   ).join('');
 }
 
-window.speakWord = function(word) {
+function speakWord(word) {
   const u = new SpeechSynthesisUtterance(word);
   u.rate = 0.7; u.pitch = 1.3;
   speechSynthesis.speak(u);
-};
+}
 
 let selectedBox = -1;
-window.boxClick = function(idx) {
+function boxClick(idx) {
   if (document.getElementById(`pbox-${idx}`)?.classList.contains('hint')) return;
   document.querySelectorAll('.pic-box').forEach(b => b.classList.remove('selected'));
   selectedBox = idx;
   document.getElementById(`pbox-${idx}`)?.classList.add('selected');
-};
+}
 
-window.letterClick = function(btn, ch) {
+function letterClick(btn, ch) {
   if (selectedBox === -1) {
     // auto-fill next empty box
     const empty = picAnswer.findIndex((v, i) => !v &&
@@ -356,13 +353,13 @@ window.letterClick = function(btn, ch) {
   btn.disabled = true; btn.style.opacity = '0.3';
   selectedBox = -1;
   document.querySelectorAll('.pic-box').forEach(b => b.classList.remove('selected'));
-};
+}
 
-window.submitPic = function() {
+function submitPic() {
   const ans = picAnswer.join('');
   if (ans === picWord) { score++; showFeedback(true); }
   else showFeedback(false);
-};
+}
 
 // ── Feedback (Candy / Water) ──────────────────────────────────────────────────
 function showFeedback(correct) {
@@ -418,7 +415,7 @@ function buildNavBtns() {
     </div>`;
 }
 
-window.closeFeedback = function() {
+function closeFeedback() {
   document.getElementById('feedback-overlay').style.display = 'none';
   currentQIndex++;
   if (currentQIndex >= questions.length) finishLevel();
@@ -427,15 +424,15 @@ window.closeFeedback = function() {
     else if (currentChapter === 3) renderPictorial();
     else renderGame();
   }
-};
+}
 
-window.navQ = function(dir) {
+function navQ(dir) {
   document.getElementById('feedback-overlay').style.display = 'none';
   currentQIndex = Math.max(0, currentQIndex + dir);
   if (currentChapter === 2) renderTrace();
   else if (currentChapter === 3) renderPictorial();
   else renderGame();
-};
+}
 
 async function finishLevel() {
   if (currentUser) {
@@ -473,14 +470,38 @@ function popBubble(el, cb) {
   setTimeout(() => { el.classList.remove('popping'); if (cb) cb(); }, 350);
 }
 
+// ── Expose to window (required for onclick in module scripts) ────────────────
+Object.assign(window, {
+  switchAuthMode, submitAuth, googleAuth,
+  goToChapters, logout,
+  selectChapter, showLevels,
+  speakLetter, selectOpt, submitMatch,
+  submitTrace, clearTrace,
+  speakWord, boxClick, letterClick, submitPic,
+  closeFeedback, navQ, showScreen
+});
+
 // ── Auth state ────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, user => {
   currentUser = user;
-  if (user) showHome();
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-window.addEventListener('load', playSplash);
+window.addEventListener('load', async () => {
+  // Handle Google redirect result first before showing splash
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      currentUser = result.user;
+      // Skip splash, go straight home
+      showHome();
+      return;
+    }
+  } catch(e) {
+    console.error('Redirect error:', e);
+  }
+  playSplash();
+});
 </script>
 </head>
 <body>
@@ -522,7 +543,7 @@ window.addEventListener('load', playSplash);
       <div id="auth-error" class="auth-error"></div>
       <button class="bubble auth-btn" id="auth-submit" onclick="submitAuth()">Login 🚀</button>
       <div class="auth-divider"><span>or</span></div>
-      <button class="bubble google-btn" onclick="googleAuth()">
+      <button class="bubble google-btn" id="auth-google-btn" onclick="googleAuth()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"/> Continue with Google
       </button>
       <div class="auth-switch">
@@ -559,17 +580,17 @@ window.addEventListener('load', playSplash);
   <div class="page-bg">
     <h2 class="page-title">Choose a Chapter 📚</h2>
     <div class="chapters-grid">
-      <button class="bubble chapter-btn ch1" onclick="selectChapter(1)">
+      <button class="bubble chapter-btn ch1" onclick="selectChapter(1, event)">
         <div class="ch-icon">🔤</div>
         <div class="ch-name">Chapter 1</div>
         <div class="ch-sub">Phonics</div>
       </button>
-      <button class="bubble chapter-btn ch2" onclick="selectChapter(2)">
+      <button class="bubble chapter-btn ch2" onclick="selectChapter(2, event)">
         <div class="ch-icon">✏️</div>
         <div class="ch-name">Chapter 2</div>
         <div class="ch-sub">Trace</div>
       </button>
-      <button class="bubble chapter-btn ch3" onclick="selectChapter(3)">
+      <button class="bubble chapter-btn ch3" onclick="selectChapter(3, event)">
         <div class="ch-icon">🖼️</div>
         <div class="ch-name">Chapter 3</div>
         <div class="ch-sub">Pictorial</div>
