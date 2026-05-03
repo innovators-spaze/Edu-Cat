@@ -26,28 +26,40 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 const API = 'http://localhost:3000/api';
-const AC = new (window.AudioContext || window.webkitAudioContext)();
+let AC = null;
+
+function getAC() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
 
 function playMeow() {
-  const osc = AC.createOscillator(), gain = AC.createGain();
-  osc.connect(gain); gain.connect(AC.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(900, AC.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(400, AC.currentTime + 0.4);
-  gain.gain.setValueAtTime(0.4, AC.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.5);
-  osc.start(); osc.stop(AC.currentTime + 0.5);
+  try {
+    const ac = getAC();
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ac.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.4, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5);
+    osc.start(); osc.stop(ac.currentTime + 0.5);
+  } catch(e) {}
 }
 
 function playPop() {
-  const osc = AC.createOscillator(), gain = AC.createGain();
-  osc.connect(gain); gain.connect(AC.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(600, AC.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(200, AC.currentTime + 0.08);
-  gain.gain.setValueAtTime(0.5, AC.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.1);
-  osc.start(); osc.stop(AC.currentTime + 0.1);
+  try {
+    const ac = getAC();
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ac.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.5, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+    osc.start(); osc.stop(ac.currentTime + 0.1);
+  } catch(e) {}
 }
 
 let currentUser = null;
@@ -70,7 +82,7 @@ function showScreen(id) {
 // ── Splash ───────────────────────────────────────────────────────────────────
 function playSplash() {
   showScreen('splash');
-  playMeow();
+  // meow plays on first user interaction (auth screen tap) due to autoplay policy
   setTimeout(() => {
     document.getElementById('splash-cat').classList.add('bounce');
     document.getElementById('splash-title').classList.add('pop-in');
@@ -95,6 +107,7 @@ function switchAuthMode() {
 }
 
 async function submitAuth() {
+  playMeow();
   const title = document.getElementById('auth-title').textContent;
   const name = document.getElementById('auth-name').value.trim();
   const email = document.getElementById('auth-email').value.trim();
@@ -124,6 +137,7 @@ async function submitAuth() {
 }
 
 async function googleAuth() {
+  playMeow();
   const errEl = document.getElementById('auth-error');
   errEl.textContent = 'Redirecting to Google...';
   try {
