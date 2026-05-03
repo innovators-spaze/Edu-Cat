@@ -27,6 +27,7 @@ const googleProvider = new GoogleAuthProvider();
 
 const API = 'http://localhost:3000/api';
 let currentUser = null;
+let splashTimer = null;
 let currentChapter = 0, currentLevel = 1, currentQIndex = 0;
 let questions = [], score = 0;
 let selectedAnswers = {};
@@ -45,15 +46,16 @@ function showScreen(id) {
 // ── Splash ───────────────────────────────────────────────────────────────────
 function playSplash() {
   showScreen('splash');
-  const meow = document.getElementById('meow-audio');
-  meow.play().catch(()=>{});
+  document.getElementById('meow-audio').play().catch(()=>{});
   setTimeout(() => {
     document.getElementById('splash-cat').classList.add('bounce');
     document.getElementById('splash-title').classList.add('pop-in');
   }, 300);
-  setTimeout(() => {
+  // After 3.5s go to auth — but only if onAuthStateChanged hasn't already navigated
+  splashTimer = setTimeout(() => {
+    splashTimer = null;
     if (!currentUser) showScreen('auth');
-    else showHome();
+    // if currentUser is set, onAuthStateChanged already called showHome()
   }, 3500);
 }
 
@@ -82,12 +84,11 @@ async function submitAuth() {
       if (!name) { errEl.textContent = 'Please enter your name!'; return; }
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(cred.user, { displayName: name });
-      currentUser = cred.user;
+      // onAuthStateChanged will fire and navigate to home
     } else {
-      const cred = await signInWithEmailAndPassword(auth, email, pass);
-      currentUser = cred.user;
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will fire and navigate to home
     }
-    showHome();
   } catch(e) {
     const msg = e.code === 'auth/invalid-credential' ? 'Invalid email or password.' :
                 e.code === 'auth/email-already-in-use' ? 'Email already registered.' :
@@ -549,19 +550,24 @@ Object.assign(window, {
 });
 
 // ── Auth state ────────────────────────────────────────────────────────────────
+// Single source of truth: whenever Firebase confirms a user, go home.
+// Whenever Firebase confirms no user AND splash is done, stay on auth.
 onAuthStateChanged(auth, user => {
   currentUser = user;
+  if (user) {
+    // Cancel splash timer so it doesn't redirect to auth after we go home
+    if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
+    showHome();
+  }
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  // Handle Google redirect result first before showing splash
+  // Handle Google redirect result on return from Google sign-in
   try {
     const result = await getRedirectResult(auth);
     if (result?.user) {
-      currentUser = result.user;
-      // Skip splash, go straight home
-      showHome();
+      // onAuthStateChanged will fire and call showHome()
       return;
     }
   } catch(e) {
