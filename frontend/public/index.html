@@ -91,11 +91,9 @@ function playSplash() {
     document.getElementById('splash-cat').classList.add('bounce');
     document.getElementById('splash-title').classList.add('pop-in');
   }, 300);
-  // After 3.5s go to auth — but only if onAuthStateChanged hasn't already navigated
   splashTimer = setTimeout(() => {
     splashTimer = null;
     if (!currentUser) showScreen('auth');
-    // if currentUser is set, onAuthStateChanged already called showHome()
   }, 3500);
 }
 
@@ -601,21 +599,9 @@ Object.assign(window, {
 });
 
 // ── Auth state + Boot ────────────────────────────────────────────────────────
-let authResolved = false;
-
 onAuthStateChanged(auth, user => {
   currentUser = user;
-  if (!authResolved) {
-    // First fire: Firebase has checked persisted session
-    authResolved = true;
-    if (splashTimer) {
-      // Splash is running — cancel it and navigate now
-      clearTimeout(splashTimer); splashTimer = null;
-    }
-    if (user) showHome();
-    else showScreen('auth');
-  } else if (user) {
-    // Subsequent fire after login action
+  if (user) {
     if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
     showHome();
   }
@@ -623,7 +609,6 @@ onAuthStateChanged(auth, user => {
 
 window.addEventListener('load', async () => {
   playSplash();
-  // Handle Google redirect result silently — onAuthStateChanged will navigate
   try { await getRedirectResult(auth); } catch(e) { console.error(e); }
 });
 </script>
