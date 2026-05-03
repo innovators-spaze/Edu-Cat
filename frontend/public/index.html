@@ -113,37 +113,47 @@ async function submitAuth() {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
   const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-submit');
   errEl.textContent = '';
   if (!email) { errEl.textContent = 'Please enter your email!'; return; }
   if (!pass)  { errEl.textContent = 'Please enter your password!'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Please wait...';
   try {
     if (title === 'Register') {
-      if (!name) { errEl.textContent = 'Please enter your name!'; return; }
+      if (!name) { errEl.textContent = 'Please enter your name!'; btn.disabled = false; btn.textContent = 'Register 🎉'; return; }
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(cred.user, { displayName: name });
-      // onAuthStateChanged will fire and navigate to home
+      currentUser = cred.user;
     } else {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will fire and navigate to home
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      currentUser = cred.user;
     }
+    showHome();
   } catch(e) {
     const msg = e.code === 'auth/invalid-credential' ? 'Invalid email or password.' :
+                e.code === 'auth/user-not-found'     ? 'No account found with this email.' :
+                e.code === 'auth/wrong-password'     ? 'Wrong password.' :
                 e.code === 'auth/email-already-in-use' ? 'Email already registered.' :
-                e.code === 'auth/weak-password' ? 'Password must be at least 6 characters.' :
-                e.code === 'auth/invalid-email' ? 'Invalid email address.' :
-                e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+                e.code === 'auth/weak-password'      ? 'Password must be at least 6 characters.' :
+                e.code === 'auth/invalid-email'      ? 'Invalid email address.' :
+                e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim();
     errEl.textContent = msg;
+    btn.disabled = false;
+    btn.textContent = title === 'Register' ? 'Register 🎉' : 'Login 🚀';
   }
 }
 
 async function googleAuth() {
   playMeow();
   const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-google-btn');
   errEl.textContent = 'Redirecting to Google...';
+  btn.disabled = true;
   try {
     await signInWithRedirect(auth, googleProvider);
   } catch(e) {
-    errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'');
+    errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim();
+    btn.disabled = false;
   }
 }
 
@@ -586,31 +596,31 @@ Object.assign(window, {
   closeFeedback, navQ, showScreen
 });
 
-// ── Auth state ────────────────────────────────────────────────────────────────
-// Single source of truth: whenever Firebase confirms a user, go home.
-// Whenever Firebase confirms no user AND splash is done, stay on auth.
+// ── Auth state + Boot ────────────────────────────────────────────────────────
+let authResolved = false;
+
 onAuthStateChanged(auth, user => {
   currentUser = user;
-  if (user) {
-    // Cancel splash timer so it doesn't redirect to auth after we go home
+  if (!authResolved) {
+    // First fire: Firebase has checked persisted session
+    authResolved = true;
+    if (splashTimer) {
+      // Splash is running — cancel it and navigate now
+      clearTimeout(splashTimer); splashTimer = null;
+    }
+    if (user) showHome();
+    else showScreen('auth');
+  } else if (user) {
+    // Subsequent fire after login action
     if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
     showHome();
   }
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  // Handle Google redirect result on return from Google sign-in
-  try {
-    const result = await getRedirectResult(auth);
-    if (result?.user) {
-      // onAuthStateChanged will fire and call showHome()
-      return;
-    }
-  } catch(e) {
-    console.error('Redirect error:', e);
-  }
   playSplash();
+  // Handle Google redirect result silently — onAuthStateChanged will navigate
+  try { await getRedirectResult(auth); } catch(e) { console.error(e); }
 });
 </script>
 </head>
