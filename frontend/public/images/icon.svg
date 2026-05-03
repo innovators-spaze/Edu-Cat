@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="50%" style="stop-color:#764ba2"/>
+      <stop offset="100%" style="stop-color:#f093fb"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff9f0"/>
+      <stop offset="100%" style="stop-color:#fde8ff"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(0,0,0,0.25)"/>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
+
+  <!-- Shine on background -->
+  <ellipse cx="180" cy="130" rx="80" ry="50" fill="rgba(255,255,255,0.15)" transform="rotate(-20,180,130)"/>
+
+  <!-- Cat ears (left) -->
+  <polygon points="100,210 140,100 195,200" fill="#a855f7" filter="url(#shadow)"/>
+  <polygon points="115,205 145,120 188,198" fill="#f3e8ff"/>
+
+  <!-- Cat ears (right) -->
+  <polygon points="412,210 372,100 317,200" fill="#a855f7" filter="url(#shadow)"/>
+  <polygon points="397,205 367,120 324,198" fill="#f3e8ff"/>
+
+  <!-- Cat face circle -->
+  <circle cx="256" cy="300" r="175" fill="url(#face)" filter="url(#shadow)"/>
+
+  <!-- Eyes -->
+  <ellipse cx="196" cy="265" rx="28" ry="32" fill="#1e1b4b"/>
+  <ellipse cx="316" cy="265" rx="28" ry="32" fill="#1e1b4b"/>
+  <!-- Eye shine -->
+  <circle cx="206" cy="255" r="9" fill="white"/>
+  <circle cx="326" cy="255" r="9" fill="white"/>
+  <circle cx="210" cy="252" r="4" fill="white" opacity="0.6"/>
+  <circle cx="330" cy="252" r="4" fill="white" opacity="0.6"/>
+
+  <!-- Nose -->
+  <ellipse cx="256" cy="315" rx="14" ry="10" fill="#ff6b9d"/>
+
+  <!-- Mouth -->
+  <path d="M242,325 Q256,345 270,325" stroke="#ff6b9d" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <line x1="242" y1="325" x2="220" y2="318" stroke="#ff6b9d" stroke-width="3" stroke-linecap="round"/>
+  <line x1="270" y1="325" x2="292" y2="318" stroke="#ff6b9d" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Whiskers left -->
+  <line x1="150" y1="305" x2="230" y2="315" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="145" y1="320" x2="228" y2="322" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="152" y1="335" x2="230" y2="328" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Whiskers right -->
+  <line x1="362" y1="305" x2="282" y2="315" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="367" y1="320" x2="284" y2="322" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="360" y1="335" x2="282" y2="328" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Cheek blush -->
+  <ellipse cx="175" cy="340" rx="28" ry="16" fill="#ff6b9d" opacity="0.25"/>
+  <ellipse cx="337" cy="340" rx="28" ry="16" fill="#ff6b9d" opacity="0.25"/>
+
+  <!-- Colorful letters E d u at bottom -->
+  <rect x="80" y="430" width="340" height="58" rx="29" fill="rgba(0,0,0,0.25)"/>
+  <text x="256" y="472" text-anchor="middle" font-family="'Comic Sans MS', cursive" font-weight="900" font-size="42">
+    <tspan fill="#ff6b9d">E</tspan><tspan fill="#fbbf24">d</tspan><tspan fill="#22c55e">u</tspan><tspan fill="white">-</tspan><tspan fill="#3b82f6">C</tspan><tspan fill="#f97316">a</tspan><tspan fill="#a855f7">t</tspan>
+  </text>
+
+  <!-- Small stars decoration -->
+  <text x="68" y="175" font-size="32" opacity="0.9">⭐</text>
+  <text x="400" y="160" font-size="28" opacity="0.9">🌟</text>
+  <text x="420" y="390" font-size="22" opacity="0.8">✨</text>
+  <text x="55" y="390" font-size="22" opacity="0.8">✨</text>
+</svg>

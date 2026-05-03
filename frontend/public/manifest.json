@@ -1,0 +1,13 @@
+{
+  "name": "Edu-Cat",
+  "short_name": "Edu-Cat",
+  "description": "Fun phonics learning app for children",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#764ba2",
+  "theme_color": "#764ba2",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "images/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
