@@ -14,7 +14,9 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
   const [feedback, setFeedback] = useState<boolean | null>(null);
   const [warn, setWarn] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const guideCanvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+  const strokePixels = useRef(0);
 
   useEffect(() => {
     fetch(`${API}/questions/2/${level}`)
@@ -23,11 +25,21 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
   }, [level]);
 
   useEffect(() => {
-    if (questions.length) drawGuide();
+    if (questions.length) { drawGuide(); resetDraw(); }
   }, [qIndex, questions]);
 
+  function resetDraw() {
+    strokePixels.current = 0;
+    setHasDrawn(false);
+    setWarn('');
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
   function drawGuide() {
-    const canvas = canvasRef.current; if (!canvas) return;
+    const canvas = guideCanvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
@@ -37,16 +49,12 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.setLineDash([8, 10]);
     ctx.lineWidth = 6;
-    ctx.strokeStyle = 'rgba(168,85,247,0.35)';
-    ctx.fillStyle = 'rgba(168,85,247,0.07)';
+    ctx.strokeStyle = 'rgba(168,85,247,0.4)';
+    ctx.fillStyle = 'rgba(168,85,247,0.08)';
     ctx.fillText(letter, W / 2, H / 2);
     ctx.strokeText(letter, W / 2, H / 2);
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(251,191,36,0.85)';
-    ctx.font = '22px serif';
-    ctx.fillText('👆 Start here', W * 0.1, H * 0.12);
     ctx.restore();
-    setHasDrawn(false); setWarn('');
   }
 
   function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
@@ -59,7 +67,7 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
     e.preventDefault();
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-    ctx.strokeStyle = '#ff6b9d'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#ff6b9d'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     drawing.current = true; setHasDrawn(true);
     const p = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(p.x, p.y);
   }
@@ -69,33 +77,65 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
     if (!drawing.current) return;
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-    const p = getPos(e, canvas); ctx.lineTo(p.x, p.y); ctx.stroke();
+    const p = getPos(e, canvas);
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    strokePixels.current += 1;
   }
 
   function onUp() { drawing.current = false; }
 
   function submit() {
-    if (!hasDrawn) { setWarn('✏️ Please trace the letter first!'); return; }
-    setScore(s => s + 1); setFeedback(true);
+    if (!hasDrawn || strokePixels.current < 30) {
+      setWarn('✏️ Please trace the letter properly!');
+      return;
+    }
+    // Check pixel overlap between user drawing and guide letter
+    const userCanvas = canvasRef.current;
+    const guideCanvas = guideCanvasRef.current;
+    if (!userCanvas || !guideCanvas) return;
+
+    const W = userCanvas.width, H = userCanvas.height;
+    const userCtx = userCanvas.getContext('2d')!;
+    const guideCtx = guideCanvas.getContext('2d')!;
+    const userData = userCtx.getImageData(0, 0, W, H).data;
+    const guideData = guideCtx.getImageData(0, 0, W, H).data;
+
+    let guidePixels = 0, overlap = 0;
+    for (let i = 3; i < userData.length; i += 4) {
+      const userAlpha = userData[i];
+      const guideAlpha = guideData[i];
+      if (guideAlpha > 20) { guidePixels++; if (userAlpha > 20) overlap++; }
+    }
+
+    const coverageRatio = guidePixels > 0 ? overlap / guidePixels : 0;
+    const ok = coverageRatio >= 0.08 || strokePixels.current >= 80; // lenient for kids
+
+    if (ok) setScore(s => s + 1);
+    else setWarn('✏️ Try to trace the letter more carefully!');
+    setFeedback(ok);
   }
 
-  function clear() { drawGuide(); }
+  function clear() { drawGuide(); resetDraw(); }
 
   function next() { if (qIndex >= questions.length - 1) onComplete(); setFeedback(null); setQIndex(i => i + 1); }
   function prev() { setFeedback(null); setQIndex(i => Math.max(0, i - 1)); }
 
-  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading...</div></div>;
+  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading... ⏳</div></div>;
 
   const isLast = qIndex >= questions.length - 1;
+  const letter = questions[qIndex]?.letter || '';
 
   return (
     <div className="page-bg">
-      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length}</div>
+      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length} · ⭐ {score}</div>
       <div className={`trace-letter-label ${warn ? 'error' : ''}`}>
-        {warn || `Trace the letter: ${questions[qIndex]?.letter}`}
+        {warn || `Trace the letter: ${letter}`}
       </div>
       <div className="trace-container">
-        <canvas ref={canvasRef} width={300} height={300} className="trace-canvas"
+        {/* Guide layer (bottom) */}
+        <canvas ref={guideCanvasRef} width={300} height={300} className="trace-canvas trace-guide" />
+        {/* Drawing layer (top) */}
+        <canvas ref={canvasRef} width={300} height={300} className="trace-canvas trace-draw"
           onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
           onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp} />
       </div>

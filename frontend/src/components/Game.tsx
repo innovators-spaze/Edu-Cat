@@ -17,12 +17,13 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [chosen, setChosen] = useState<string | null>(null);
+  const [wrongChosen, setWrongChosen] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch(`${API}/questions/${chapter}/${level}`)
       .then(r => r.json())
-      .then(d => { setQuestions(d.questions); setQIndex(0); setScore(0); setChosen(null); setFeedback(null); });
+      .then(d => { setQuestions(d.questions); setQIndex(0); setScore(0); setChosen(null); setWrongChosen(null); setFeedback(null); });
   }, [chapter, level]);
 
   function speak(text: string) {
@@ -32,32 +33,44 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
   }
 
   function selectOpt(opt: string, correct: string) {
-    if (chosen) return;
-    setChosen(opt);
+    if (chosen) return; // already answered correctly
     const ok = opt === correct;
-    if (ok) setScore(s => s + 1);
-    setTimeout(() => setFeedback(ok), 300);
+    if (ok) {
+      setChosen(opt);
+      setScore(s => s + 1);
+      setTimeout(() => setFeedback(true), 300);
+    } else {
+      // Show red shake, then clear so they can retry
+      setWrongChosen(opt);
+      setTimeout(() => setWrongChosen(null), 700);
+    }
   }
 
   function next() {
     if (qIndex >= questions.length - 1) onComplete();
-    setFeedback(null); setChosen(null);
+    setFeedback(null); setChosen(null); setWrongChosen(null);
     setQIndex(i => i + 1);
   }
 
   function prev() {
-    setFeedback(null); setChosen(null);
+    setFeedback(null); setChosen(null); setWrongChosen(null);
     setQIndex(i => Math.max(0, i - 1));
   }
 
-  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading...</div></div>;
+  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading... ⏳</div></div>;
 
   const q = questions[qIndex];
   const isLast = qIndex >= questions.length - 1;
 
+  function optClass(opt: string) {
+    if (chosen === opt) return 'correct';
+    if (wrongChosen === opt) return 'wrong shake';
+    return '';
+  }
+
   return (
     <div className="page-bg">
-      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length}</div>
+      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length} · ⭐ {score}</div>
       <div className="game-area">
         {q.type === 'sound_from_letter' && (
           <>
@@ -66,8 +79,9 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
             <div className="options-grid">
               {q.options?.map(opt => (
                 <button key={opt}
-                  className={`bubble opt-btn ${chosen === opt ? (opt === q.correct ? 'correct' : 'wrong') : ''} ${chosen && opt === q.correct ? 'correct' : ''}`}
-                  onClick={() => selectOpt(opt, q.correct!)} disabled={!!chosen}>
+                  className={`bubble opt-btn ${optClass(opt)}`}
+                  onClick={() => selectOpt(opt, q.correct!)}
+                  disabled={!!chosen}>
                   <span className="speaker-icon" onClick={e => { e.stopPropagation(); speak(opt); }}>🔊</span>
                   <span className="opt-letter">{opt}{opt.toLowerCase()}</span>
                 </button>
@@ -82,8 +96,9 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
             <div className="options-grid">
               {q.options?.map(opt => (
                 <button key={opt}
-                  className={`bubble opt-btn ${chosen === opt ? (opt === q.correct ? 'correct' : 'wrong') : ''} ${chosen && opt === q.correct ? 'correct' : ''}`}
-                  onClick={() => selectOpt(opt, q.correct!)} disabled={!!chosen}>
+                  className={`bubble opt-btn ${optClass(opt)}`}
+                  onClick={() => selectOpt(opt, q.correct!)}
+                  disabled={!!chosen}>
                   {opt}{opt.toLowerCase()}
                 </button>
               ))}

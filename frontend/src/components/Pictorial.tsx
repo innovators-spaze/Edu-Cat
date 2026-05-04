@@ -4,6 +4,21 @@ import Feedback from './Feedback';
 
 const API = '/api';
 
+// Emoji map for all picture words used in backend
+const EMOJI: Record<string, string> = {
+  cat:'🐱', dog:'🐶', sun:'☀️', bus:'🚌', cup:'☕', hat:'🎩', pig:'🐷', hen:'🐔',
+  ant:'🐜', bee:'🐝', cow:'🐄', egg:'🥚', fan:'🌀', jar:'🫙', map:'🗺️', net:'🥅',
+  owl:'🦉', pen:'🖊️', rat:'🐀', top:'🪀', van:'🚐', web:'🕸️', fox:'🦊', mud:'💧',
+  zip:'🤐', yak:'🦬', key:'🔑', log:'🪵',
+  ball:'⚽', frog:'🐸', drum:'🥁', crab:'🦀', star:'⭐', ship:'🚢', fish:'🐟',
+  duck:'🦆', cake:'🎂', kite:'🪁', lamp:'💡', milk:'🥛', nest:'🪺', pond:'🏞️',
+  ring:'💍', sock:'🧦', tree:'🌳', wolf:'🐺', yarn:'🧶', zinc:'⚗️',
+  apple:'🍎', grape:'🍇', tiger:'🐯', camel:'🐪', plant:'🌱', cloud:'☁️',
+  bread:'🍞', chair:'🪑', train:'🚂', globe:'🌍', orange:'🍊', bridge:'🌉',
+  castle:'🏰', flower:'🌸', garden:'🌻', hammer:'🔨', island:'🏝️', jungle:'🌴',
+  elephant:'🐘', umbrella:'☂️',
+};
+
 interface Props { level: number; onLevels: () => void; onNextLevel: () => void; onComplete: () => void; }
 
 export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: Props) {
@@ -30,13 +45,25 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
   }, [qIndex, questions]);
 
   function speak(word: string) {
-    const u = new SpeechSynthesisUtterance(word);
+    const u = new SpeechSynthesisUtterance(word.toLowerCase());
     u.rate = 0.7; u.pitch = 1.3; speechSynthesis.speak(u);
   }
 
   function boxClick(idx: number) {
     const q = questions[qIndex];
     if ((q.hint || []).includes(idx)) return;
+    // If box already has a letter, remove it back to jumbled
+    if (answer[idx]) {
+      const newAns = [...answer];
+      const removedLetter = newAns[idx];
+      newAns[idx] = '';
+      // find the used index for this letter and unmark it
+      const usedI = usedIdx.find(i => questions[qIndex].jumbled![i] === removedLetter);
+      setUsedIdx(usedIdx.filter(i => i !== usedI));
+      setAnswer(newAns);
+      setSelectedBox(idx);
+      return;
+    }
     setSelectedBox(idx);
   }
 
@@ -50,12 +77,12 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
     const q = questions[qIndex];
     if ((q.hint || []).includes(box)) return;
     const newAns = [...answer];
-    // return previous letter
+    // If box already filled, return that letter to pool
     const prev = newAns[box];
-    let newUsed = usedIdx.filter(i => {
-      if (prev && questions[qIndex].jumbled![i] === prev) return false;
-      return true;
-    });
+    let newUsed = prev
+      ? usedIdx.filter(i => !(questions[qIndex].jumbled![i] === prev && !newUsed?.includes(i)))
+      : [...usedIdx];
+    newUsed = usedIdx.filter(i => !(newAns[box] && questions[qIndex].jumbled![i] === newAns[box]));
     newAns[box] = ch;
     newUsed = [...newUsed, li];
     setAnswer(newAns); setUsedIdx(newUsed); setSelectedBox(-1);
@@ -71,19 +98,22 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
   function next() { if (qIndex >= questions.length - 1) onComplete(); setFeedback(null); setQIndex(i => i + 1); }
   function prev() { setFeedback(null); setQIndex(i => Math.max(0, i - 1)); }
 
-  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading...</div></div>;
+  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading... ⏳</div></div>;
 
   const q = questions[qIndex];
   const isLast = qIndex >= questions.length - 1;
   const available = (q.jumbled || []).map((ch, i) => ({ ch, i })).filter(({ i }) => !usedIdx.includes(i));
+  const emoji = EMOJI[q.img?.toLowerCase() || ''] || '🖼️';
 
   return (
     <div className="page-bg">
-      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length}</div>
-      <img className="pic-image" src={`/images/${q.img}.png`} alt={q.word}
-        onClick={() => speak(q.word!)}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-      <div className="pic-tap-hint">👆 Tap image to hear!</div>
+      <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length} · ⭐ {score}</div>
+
+      <button className="pic-emoji-btn bubble" onClick={() => speak(q.word!)}>
+        <span className="pic-emoji">{emoji}</span>
+        <span className="pic-tap-hint">👆 Tap to hear!</span>
+      </button>
+
       <div className="pic-boxes">
         {answer.map((ch, i) => {
           const isHint = (q.hint || []).includes(i);
@@ -96,12 +126,15 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
           );
         })}
       </div>
+
       <div className="pic-letters">
         {available.map(({ ch, i }) => (
           <button key={i} className="bubble pic-letter-btn" onClick={() => letterClick(ch, i)}>{ch}</button>
         ))}
       </div>
+
       <button className="bubble submit-btn" onClick={submit}>✅ Submit</button>
+
       {feedback !== null && (
         <Feedback correct={feedback} qIndex={qIndex} totalQ={questions.length}
           onNext={next} onPrev={prev} onLevels={onLevels}
