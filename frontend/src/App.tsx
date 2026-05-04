@@ -13,8 +13,8 @@ import './App.css';
 
 type Screen = 'splash' | 'auth' | 'home' | 'chapters' | 'levels' | 'game' | 'trace' | 'pictorial';
 
-// completed[chapter][level] = true
-type Progress = Record<number, Record<number, boolean>>;
+// progress[chapter][level] = stars (1-3), 0 = attempted but no stars
+type Progress = Record<number, Record<number, number>>;
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
@@ -24,6 +24,7 @@ export default function App() {
   const [chapter, setChapter] = useState(1);
   const [level, setLevel] = useState(1);
   const [progress, setProgress] = useState<Progress>({ 1: {}, 2: {}, 3: {} });
+  const [lastScore, setLastScore] = useState(0);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthReady(true); });
@@ -41,9 +42,19 @@ export default function App() {
     if (saved) setProgress(JSON.parse(saved));
   }, [user]);
 
-  function markComplete(ch: number, lvl: number) {
+  function starsFromScore(score: number) {
+    if (score >= 9) return 3;
+    if (score >= 7) return 2;
+    if (score >= 5) return 1;
+    return 0;
+  }
+
+  function markComplete(ch: number, lvl: number, score: number) {
+    const earned = starsFromScore(score);
     setProgress(prev => {
-      const next = { ...prev, [ch]: { ...prev[ch], [lvl]: true } };
+      const prevStars = prev[ch]?.[lvl] ?? -1;
+      const best = Math.max(prevStars, earned);
+      const next = { ...prev, [ch]: { ...prev[ch], [lvl]: best } };
       if (user) localStorage.setItem(`educat_progress_${user.uid}`, JSON.stringify(next));
       return next;
     });
@@ -51,7 +62,6 @@ export default function App() {
 
   function isChapterUnlocked(ch: number) {
     if (ch <= 2) return true;
-    // Chapter 3 unlocked only when all 30 levels of ch1 and ch2 are done
     const ch1Done = Object.keys(progress[1] || {}).length >= 30;
     const ch2Done = Object.keys(progress[2] || {}).length >= 30;
     return ch1Done && ch2Done;
@@ -70,14 +80,15 @@ export default function App() {
   }
 
   function nextLevel() {
-    markComplete(chapter, level);
+    markComplete(chapter, level, lastScore);
     const next = level + 1;
     if (next <= 30) setLevel(next);
     else setScreen('levels');
   }
 
-  function handleLevelComplete() {
-    markComplete(chapter, level);
+  function handleLevelComplete(score: number) {
+    setLastScore(score);
+    markComplete(chapter, level, score);
   }
 
   const displayName = user?.displayName || user?.email || 'Friend';

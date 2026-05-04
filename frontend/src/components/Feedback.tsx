@@ -16,6 +16,8 @@ const CANDIES = ['🍬', '🍭', '🍫', '🍡', '🍩', '🌟', '⭐', '✨', '
 const FISH = ['🐟', '🐠', '🐡', '🦈', '🐙', '🦑'];
 
 export default function Feedback({ correct, qIndex, onNext, onPrev, onLevels, isLast, score, onNextLevel }: Props) {
+  const starsEarned = score >= 9 ? 3 : score >= 7 ? 2 : score >= 5 ? 1 : 0;
+  const starLabel = ['Keep trying! 💪', 'Good try! 😊', 'Great job! 👍', 'Perfect! 🏆'][starsEarned];
   useEffect(() => {
     const u = new SpeechSynthesisUtterance(correct ? 'Awesome! Great job!' : 'Wrong! Try again!');
     u.pitch = correct ? 1.6 : 0.7; u.rate = 0.9;
@@ -40,8 +42,18 @@ export default function Feedback({ correct, qIndex, onNext, onPrev, onLevels, is
           </div>
           <div className="awesome-card">
             <div className="awesome-emoji">🎉</div>
-            <div className="awesome-text">{isLast ? `Level Complete!` : 'Awesome!'}</div>
-            {isLast && <div className="score-text">Score: {score}/10 ⭐</div>}
+            <div className="awesome-text">{isLast ? 'Level Complete!' : 'Awesome!'}</div>
+            {isLast && (
+              <>
+                <div className="score-text">Score: {score}/10</div>
+                <div className="earned-stars">
+                  {[1,2,3].map(i => (
+                    <span key={i} className={`big-star ${i <= starsEarned ? 'big-star-on' : 'big-star-off'}`}>★</span>
+                  ))}
+                </div>
+                <div className="star-label">{starLabel}</div>
+              </>
+            )}
           </div>
         </>
       ) : (

@@ -9,7 +9,7 @@ interface Props {
   level: number;
   onLevels: () => void;
   onNextLevel: () => void;
-  onComplete: () => void;
+  onComplete: (score: number) => void;
 }
 
 export default function Game({ chapter, level, onLevels, onNextLevel, onComplete }: Props) {
@@ -47,7 +47,7 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
   }
 
   function next() {
-    if (qIndex >= questions.length - 1) onComplete();
+    if (qIndex >= questions.length - 1) onComplete(score);
     setFeedback(null); setChosen(null); setWrongChosen(null);
     setQIndex(i => i + 1);
   }
