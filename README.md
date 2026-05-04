@@ -1,56 +1,62 @@
-# Phonics Fun 🎵
+# Edu-Cat 🐱
 
-A children's phonics learning app with Firebase Authentication.
+A children's phonics learning app built with React, TypeScript, and Node.js.
 
-## Setup
+## Features
 
-### 1. Firebase Project
-1. Go to [Firebase Console](https://console.firebase.google.com/) → Create a project
-2. Enable **Authentication** → Sign-in method → **Email/Password**
-3. Go to Project Settings → Your apps → Add Web App → Copy the config
+- 🔐 Firebase Authentication (Email/Password + Google)
+- 📖 Chapter 1: Phonics — letter sounds (30 levels)
+- ✏️ Chapter 2: Letter Tracing (30 levels)
+- 🖼️ Chapter 3: Pictorial Word Building (30 levels)
+- 🤖 AI-generated questions via Groq (with static fallback)
 
-### 2. Add Firebase Config
-Open `frontend/public/index.html` and replace the placeholder config:
-```js
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+## Project Structure
+
+```
+Edu-Cat/
+├── frontend/       # React + TypeScript + Vite
+├── backend/        # Express API (questions + progress)
+└── vercel.json     # Deployment config
 ```
 
-### 3. Install & Run Backend
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- Firebase project with Authentication enabled
+- Groq API key (optional — static fallback works without it)
+
+### Backend
+
 ```bash
 cd backend
 npm install
-npm start
-```
-Server runs on http://localhost:3000 and also serves the frontend.
-
-## Project Structure
-```
-phonics-fun/
-├── backend/
-│   ├── server.js              # Express API (questions + progress)
-│   ├── generate-questions.js  # Question bank (3 chapters × 30 levels × 10 questions)
-│   └── package.json
-└── frontend/public/
-    ├── index.html             # Full SPA with Firebase Auth
-    ├── style.css              # Children-specific bubbly UI
-    ├── images/                # cat.png, dog.png, ball.png, etc.
-    └── sounds/                # meow.mp3, pop.mp3, wrong.mp3
+cp .env.example .env   # add your GROQ_API_KEY
+npm run dev
 ```
 
-## Features
-- 🐱 Animated cat splash screen with "meow"
-- 🔐 Firebase Email/Password Auth (register + login)
-- 🫧 Bubble buttons with pop animation
-- 🍬 Candy shower on correct answers
-- 🌊 Realistic sinking water on wrong answers
-- 📖 Chapter 1: Phonics (30 levels × 10 questions)
-- ✏️ Chapter 2: Letter tracing (30 levels × 10 questions)
-- 🖼️ Chapter 3: Pictorial word building (30 levels × 10 questions)
-- ◀ Previous / Next ▶ navigation
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Environment Variables
+
+### `backend/.env`
+```
+GROQ_API_KEY=your_groq_api_key
+PORT=3000
+```
+
+## Deployment
+
+Deployed on Vercel. The `vercel.json` at the root handles both frontend build and API routing.
+
+## Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite, Firebase Auth
+- **Backend**: Node.js, Express, Groq SDK
+- **Deployment**: Vercel
