@@ -8,31 +8,54 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+if (process.env.GROQ_API_KEY) {
+  groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 // ── Static fallback question generator ───────────────────────────────────────
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const PICTURE_WORDS = [
-  {word:'DOG',img:'dog',hint:[]},{word:'CAT',img:'cat',hint:[]},
-  {word:'BALL',img:'ball',hint:[]},{word:'SUN',img:'sun',hint:[]},
-  {word:'BUS',img:'bus',hint:[]},{word:'CUP',img:'cup',hint:[]},
-  {word:'HAT',img:'hat',hint:[]},{word:'PIG',img:'pig',hint:[]},
-  {word:'HEN',img:'hen',hint:[]},{word:'ANT',img:'ant',hint:[]},
-  {word:'BEE',img:'bee',hint:[]},{word:'COW',img:'cow',hint:[]},
-  {word:'EGG',img:'egg',hint:[]},{word:'FAN',img:'fan',hint:[]},
-  {word:'JAR',img:'jar',hint:[]},{word:'KEY',img:'key',hint:[]},
-  {word:'MAP',img:'map',hint:[]},{word:'NET',img:'net',hint:[]},
-  {word:'OWL',img:'owl',hint:[]},{word:'PEN',img:'pen',hint:[]},
-  {word:'RAT',img:'rat',hint:[]},{word:'TOP',img:'top',hint:[]},
-  {word:'VAN',img:'van',hint:[]},{word:'WEB',img:'web',hint:[]},
-  {word:'FOX',img:'fox',hint:[]},{word:'MUD',img:'mud',hint:[]},
-  {word:'ZIP',img:'zip',hint:[]},{word:'YAK',img:'yak',hint:[]},
-  {word:'FROG',img:'frog',hint:[0,3]},{word:'DRUM',img:'drum',hint:[0,3]},
-  {word:'CRAB',img:'crab',hint:[0,3]},{word:'STAR',img:'star',hint:[0,3]},
-  {word:'SHIP',img:'ship',hint:[0,3]},{word:'FISH',img:'fish',hint:[0,3]},
-  {word:'ELEPHANT',img:'elephant',hint:[0,2,4,6,7]},
-  {word:'APPLE',img:'apple',hint:[0,4]},
-  {word:'ORANGE',img:'orange',hint:[0,2,5]},
+const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+// Chapter 1 phonics pools by difficulty tier
+const PHONICS_TIERS = [
+  // Tier 1 (levels 1-10): vowels + most common consonants
+  ['A','E','I','O','U','B','C','D','F','G','H','M','N','P','R','S','T'],
+  // Tier 2 (levels 11-20): add less common consonants
+  ['A','E','I','O','U','B','C','D','F','G','H','J','K','L','M','N','P','Q','R','S','T','V','W'],
+  // Tier 3 (levels 21-30): full alphabet
+  ALL_LETTERS,
+];
+
+// Chapter 3 picture words by difficulty tier
+const WORDS_EASY = [
+  {word:'CAT',img:'cat'},{word:'DOG',img:'dog'},{word:'SUN',img:'sun'},
+  {word:'BUS',img:'bus'},{word:'CUP',img:'cup'},{word:'HAT',img:'hat'},
+  {word:'PIG',img:'pig'},{word:'HEN',img:'hen'},{word:'ANT',img:'ant'},
+  {word:'BEE',img:'bee'},{word:'COW',img:'cow'},{word:'EGG',img:'egg'},
+  {word:'FAN',img:'fan'},{word:'JAR',img:'jar'},{word:'MAP',img:'map'},
+  {word:'NET',img:'net'},{word:'OWL',img:'owl'},{word:'PEN',img:'pen'},
+  {word:'RAT',img:'rat'},{word:'TOP',img:'top'},
+];
+const WORDS_MEDIUM = [
+  {word:'BALL',img:'ball'},{word:'FROG',img:'frog'},{word:'DRUM',img:'drum'},
+  {word:'CRAB',img:'crab'},{word:'STAR',img:'star'},{word:'SHIP',img:'ship'},
+  {word:'FISH',img:'fish'},{word:'DUCK',img:'duck'},{word:'CAKE',img:'cake'},
+  {word:'KITE',img:'kite'},{word:'LAMP',img:'lamp'},{word:'MILK',img:'milk'},
+  {word:'NEST',img:'nest'},{word:'POND',img:'pond'},{word:'RING',img:'ring'},
+  {word:'SOCK',img:'sock'},{word:'TREE',img:'tree'},{word:'WOLF',img:'wolf'},
+  {word:'YARN',img:'yarn'},{word:'ZINC',img:'zinc'},
+];
+const WORDS_HARD = [
+  {word:'APPLE',img:'apple',hint:[0,4]},{word:'GRAPE',img:'grape',hint:[0,4]},
+  {word:'TIGER',img:'tiger',hint:[0,4]},{word:'CAMEL',img:'camel',hint:[0,4]},
+  {word:'PLANT',img:'plant',hint:[0,4]},{word:'CLOUD',img:'cloud',hint:[0,4]},
+  {word:'BREAD',img:'bread',hint:[0,4]},{word:'CHAIR',img:'chair',hint:[0,4]},
+  {word:'TRAIN',img:'train',hint:[0,4]},{word:'GLOBE',img:'globe',hint:[0,4]},
+  {word:'ORANGE',img:'orange',hint:[0,2,5]},{word:'BRIDGE',img:'bridge',hint:[0,2,5]},
+  {word:'CASTLE',img:'castle',hint:[0,2,5]},{word:'FLOWER',img:'flower',hint:[0,2,5]},
+  {word:'GARDEN',img:'garden',hint:[0,2,5]},{word:'HAMMER',img:'hammer',hint:[0,2,5]},
+  {word:'ISLAND',img:'island',hint:[0,2,5]},{word:'JUNGLE',img:'jungle',hint:[0,2,5]},
+  {word:'ELEPHANT',img:'elephant',hint:[0,2,4,7]},
   {word:'UMBRELLA',img:'umbrella',hint:[0,2,4,7]},
 ];
 
@@ -47,32 +70,62 @@ function shuffle(arr) {
 
 function staticQuestions(chapter, level) {
   const questions = [];
+
   if (chapter === 1) {
-    const pool = shuffle(LETTERS);
+    // Pick difficulty tier based on level
+    const tierIdx = level <= 10 ? 0 : level <= 20 ? 1 : 2;
+    const pool = shuffle(PHONICS_TIERS[tierIdx]);
+    // At higher levels, use more match_letter_sound (harder)
+    const matchFreq = level <= 10 ? 4 : level <= 20 ? 3 : 2; // every Nth question is match type
+
     for (let q = 0; q < 10; q++) {
-      const letter = pool[q % 26];
-      const wrong = shuffle(LETTERS.filter(l => l !== letter)).slice(0, 3);
-      const qtype = q % 3;
-      if (qtype === 0) {
+      const letter = pool[q % pool.length];
+      const wrong = shuffle(ALL_LETTERS.filter(l => l !== letter)).slice(0, 3);
+      if (q % matchFreq === matchFreq - 1) {
+        // match_letter_sound: harder, uses more pairs at higher levels
+        const pairCount = level <= 10 ? 3 : level <= 20 ? 4 : 5;
+        questions.push({ type: 'match_letter_sound', pairs: shuffle(pool).slice(0, pairCount) });
+      } else if (q % 2 === 0) {
         questions.push({ type: 'sound_from_letter', letter, options: shuffle([letter, ...wrong]), correct: letter });
-      } else if (qtype === 1) {
-        questions.push({ type: 'letter_from_sound', letter, options: shuffle([letter, ...wrong]), correct: letter });
       } else {
-        questions.push({ type: 'match_letter_sound', pairs: shuffle(LETTERS).slice(0, 5) });
+        questions.push({ type: 'letter_from_sound', letter, options: shuffle([letter, ...wrong]), correct: letter });
       }
     }
+
   } else if (chapter === 2) {
-    const all = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), ...'abcdefghijklmnopqrstuvwxyz'.split('')];
+    // Level 1-10: uppercase A-Z (cycle), 11-20: lowercase a-z, 21-30: mix both
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const lower = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    let pool;
+    if (level <= 10) pool = upper;
+    else if (level <= 20) pool = lower;
+    else pool = [...upper, ...lower];
+
+    const start = ((level - 1) % 26) * (level <= 20 ? 1 : 0); // spread across alphabet
     for (let q = 0; q < 10; q++) {
-      questions.push({ type: 'trace', letter: all[((level - 1) * 10 + q) % all.length] });
+      questions.push({ type: 'trace', letter: pool[(start + q) % pool.length] });
     }
+
   } else {
+    // Chapter 3: level 1-10 easy 3-letter, 11-20 medium 4-letter, 21-30 hard long words
+    let wordPool;
+    if (level <= 10) wordPool = WORDS_EASY;
+    else if (level <= 20) wordPool = WORDS_MEDIUM;
+    else wordPool = WORDS_HARD;
+
+    const shuffled = shuffle(wordPool);
     for (let q = 0; q < 10; q++) {
-      const w = PICTURE_WORDS[((level - 1) * 10 + q) % PICTURE_WORDS.length];
-      const usePartial = level >= 15 && w.hint.length > 0;
-      questions.push({ type: usePartial ? 'pictorial_partial' : 'pictorial_full', word: w.word, img: w.img, jumbled: shuffle(w.word.split('')), hint: usePartial ? w.hint : [] });
+      const w = shuffled[q % shuffled.length];
+      const usePartial = level >= 21 && w.hint && w.hint.length > 0;
+      questions.push({
+        type: usePartial ? 'pictorial_partial' : 'pictorial_full',
+        word: w.word, img: w.img,
+        jumbled: shuffle(w.word.split('')),
+        hint: usePartial ? w.hint : []
+      });
     }
   }
+
   return { level, questions };
 }
 
@@ -142,12 +195,12 @@ app.get('/api/questions/:chapter/:level', async (req, res) => {
 
   const key = `${chapter}_${level}`;
 
-  // Return cached if available
-  if (cache.has(key)) return res.json(cache.get(key));
+  // Return cached if available (skip cache in dev by checking env)
+  if (cache.has(key) && process.env.NODE_ENV === 'production') return res.json(cache.get(key));
 
   try {
     // Try Groq AI first
-    if (process.env.GROQ_API_KEY) {
+    if (groq) {
       const data = await groqQuestions(chapter, level);
       cache.set(key, data);
       return res.json(data);
