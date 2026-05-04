@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from './firebase';
 import Splash from './components/Splash';
@@ -19,9 +19,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [chapter, setChapter] = useState(1);
   const [level, setLevel] = useState(1);
-  const splashDone = useRef(false);
+  const [splashDone, setSplashDone] = useState(false);
 
-  // Wait for Firebase to resolve auth state before navigating
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => {
       setUser(u);
@@ -30,19 +29,14 @@ export default function App() {
     return unsub;
   }, []);
 
-  // When splash finishes AND auth is ready, navigate
   useEffect(() => {
-    if (splashDone.current && authReady) {
+    if (splashDone && authReady) {
       setScreen(user ? 'home' : 'auth');
     }
-  }, [authReady, user]);
+  }, [splashDone, authReady, user]);
 
   function afterSplash() {
-    splashDone.current = true;
-    if (authReady) {
-      setScreen(user ? 'home' : 'auth');
-    }
-    // else: wait for authReady effect above
+    setSplashDone(true);
   }
 
   function selectChapter(ch: number) {
