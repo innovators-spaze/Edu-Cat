@@ -4,9 +4,9 @@ import Feedback from './Feedback';
 
 const API = '/api';
 
-interface Props { level: number; onLevels: () => void; onNextLevel: () => void; }
+interface Props { level: number; onLevels: () => void; onNextLevel: () => void; onComplete: () => void; }
 
-export default function Pictorial({ level, onLevels, onNextLevel }: Props) {
+export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -68,7 +68,7 @@ export default function Pictorial({ level, onLevels, onNextLevel }: Props) {
     setFeedback(ok);
   }
 
-  function next() { setFeedback(null); setQIndex(i => i + 1); }
+  function next() { if (qIndex >= questions.length - 1) onComplete(); setFeedback(null); setQIndex(i => i + 1); }
   function prev() { setFeedback(null); setQIndex(i => Math.max(0, i - 1)); }
 
   if (!questions.length) return <div className="page-bg"><div className="page-title">Loading...</div></div>;

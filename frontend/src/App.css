@@ -107,10 +107,14 @@ body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; overflow: hidden;
 .ch2 { background: linear-gradient(135deg, #3b82f6, #6366f1); }
 .ch3 { background: linear-gradient(135deg, #22c55e, #16a34a); }
 .ch-icon { font-size: 2.5rem; } .ch-name { font-size: 1.3rem; } .ch-sub { font-size: 0.95rem; opacity: 0.85; }
+.ch-progress { font-size: 0.8rem; opacity: 0.75; margin-top: 4px; }
+.locked { background: linear-gradient(135deg, #9ca3af, #6b7280) !important; cursor: not-allowed; filter: grayscale(0.4); }
+.locked:hover { transform: none !important; }
 
 /* Levels */
 .levels-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 400px; }
 .level-btn { padding: 12px 6px; font-size: 1rem; border-radius: 50%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--pink), var(--purple)); }
+.level-done { background: linear-gradient(135deg, #22c55e, #16a34a) !important; }
 
 /* Game */
 .progress-bar { background: linear-gradient(135deg, var(--purple), var(--blue)); color: white; padding: 8px 20px; border-radius: 50px; font-size: 0.95rem; font-weight: bold; align-self: stretch; text-align: center; }
@@ -151,23 +155,41 @@ body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; overflow: hidden;
 
 /* Feedback */
 .feedback-overlay { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-.feedback-overlay.correct { background: linear-gradient(160deg, #fef9c3, #fce7f3); }
-.feedback-overlay.wrong   { background: linear-gradient(160deg, #0ea5e9, #0369a1); }
-.feedback-msg { font-size: 2.5rem; font-weight: 900; text-align: center; z-index: 2; position: relative; }
-.awesome-msg { color: var(--purple); text-shadow: 3px 3px 0 rgba(168,85,247,0.2); }
+.fb-correct { background: linear-gradient(160deg, #fef9c3 0%, #fce7f3 60%, #e0f2fe 100%); }
+.fb-wrong   { background: linear-gradient(180deg, #bae6fd 0%, #0ea5e9 40%, #0369a1 100%); }
+
+/* Candy shower */
 .candy-shower { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.candy { position: absolute; top: -40px; font-size: 1.8rem; animation: candyFall linear forwards; }
-@keyframes candyFall { 0% { top: -40px; transform: rotate(0deg); opacity: 1; } 100% { top: 110vh; transform: rotate(720deg); opacity: 0.5; } }
-.water-scene { position: absolute; inset: 0; overflow: hidden; }
-.water-surface { position: absolute; bottom: 0; left: 0; right: 0; height: 55%; background: linear-gradient(180deg, rgba(14,165,233,0.7) 0%, rgba(3,105,161,0.95) 100%); border-radius: 60% 60% 0 0 / 30px 30px 0 0; animation: waterRise 1.2s cubic-bezier(0.22,1,0.36,1) forwards; }
-@keyframes waterRise { from { height: 0; } to { height: 55%; } }
-.bubble-water { position: absolute; bottom: 10%; border-radius: 50%; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.4); animation: bubbleRise 2.5s ease-in infinite; }
-@keyframes bubbleRise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-60vh) scale(1.3); opacity: 0; } }
-.wrong-text { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 3rem; font-weight: 900; color: white; text-shadow: 3px 3px 0 rgba(0,0,0,0.3); z-index: 2; animation: sinkText 1.5s ease forwards; }
-@keyframes sinkText { 0% { top: 20%; opacity: 1; } 100% { top: 55%; opacity: 0.4; } }
+.candy { position: absolute; top: -50px; animation: candyFall linear forwards; }
+@keyframes candyFall { 0% { top: -50px; transform: rotate(0deg) scale(1); opacity: 1; } 80% { opacity: 1; } 100% { top: 110vh; transform: rotate(900deg) scale(0.8); opacity: 0; } }
+.awesome-card { position: relative; z-index: 2; background: white; border-radius: 30px; padding: 30px 50px; text-align: center; box-shadow: 0 20px 60px rgba(168,85,247,0.3); animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes popIn { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.awesome-emoji { font-size: 4rem; }
+.awesome-text { font-size: 2.8rem; font-weight: 900; color: var(--purple); text-shadow: 3px 3px 0 rgba(168,85,247,0.2); }
+.score-text { font-size: 1.4rem; color: var(--orange); font-weight: bold; margin-top: 8px; }
+
+/* Realistic water scene */
+.water-scene { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; }
+.water-sky { flex: 0 0 38%; display: flex; align-items: center; justify-content: center; position: relative; }
+.wrong-text { font-size: 3.5rem; font-weight: 900; color: #1e3a5f; text-shadow: 2px 2px 0 rgba(255,255,255,0.5); animation: wrongBounce 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes wrongBounce { from { transform: scale(0.3) rotate(-10deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+.water-body { flex: 1; position: relative; overflow: hidden; }
+.water-fill { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,165,233,0.55) 0%, rgba(3,105,161,0.85) 40%, rgba(1,65,110,0.98) 100%); animation: waterFill 1s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: bottom; }
+@keyframes waterFill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.wave { position: absolute; top: -18px; left: -50%; width: 200%; height: 36px; background: radial-gradient(ellipse at 50% 100%, rgba(14,165,233,0.7) 0%, transparent 70%); border-radius: 50%; z-index: 2; }
+.wave1 { animation: waveMove 2s ease-in-out infinite; }
+.wave2 { top: -10px; opacity: 0.6; animation: waveMove 2.8s ease-in-out infinite reverse; }
+@keyframes waveMove { 0%,100% { transform: translateX(0) scaleY(1); } 50% { transform: translateX(5%) scaleY(1.3); } }
+.water-bubble { position: absolute; bottom: 5%; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.1)); border: 1.5px solid rgba(255,255,255,0.5); animation: bubbleFloat ease-in infinite; z-index: 3; }
+@keyframes bubbleFloat { 0% { transform: translateY(0) scale(1); opacity: 0.9; } 100% { transform: translateY(-70vh) scale(1.4); opacity: 0; } }
+.fish { position: absolute; z-index: 3; animation: fishSwim linear infinite; }
+@keyframes fishSwim { 0% { left: -10%; transform: scaleX(1); } 49% { left: 110%; transform: scaleX(1); } 50% { left: 110%; transform: scaleX(-1); } 100% { left: -10%; transform: scaleX(-1); } }
+.sinking-cat { position: absolute; left: 50%; transform: translateX(-50%); font-size: 3rem; z-index: 4; animation: catSink 2s ease-in forwards; }
+@keyframes catSink { 0% { top: 5%; opacity: 1; } 60% { opacity: 1; } 100% { top: 80%; opacity: 0.2; } }
+
 .nav-btns { position: absolute; bottom: 40px; display: flex; gap: 16px; z-index: 10; flex-wrap: wrap; justify-content: center; }
 .nav-btn { font-size: 1rem; padding: 14px 28px; background: linear-gradient(135deg, var(--purple), var(--blue)); }
-.close-btn { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.go-btn { background: linear-gradient(135deg, #22c55e, #16a34a); }
 
 @media (max-width: 380px) {
   .splash-title { font-size: 2rem; }

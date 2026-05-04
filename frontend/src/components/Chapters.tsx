@@ -3,35 +3,45 @@ import { useAudio } from '../hooks/useAudio';
 interface Props {
   onSelect: (ch: number) => void;
   onBack: () => void;
+  isUnlocked: (ch: number) => boolean;
+  progress: Record<number, Record<number, boolean>>;
 }
 
-export default function Chapters({ onSelect, onBack }: Props) {
+export default function Chapters({ onSelect, onBack, isUnlocked, progress }: Props) {
   const { playPop } = useAudio();
 
   function pick(ch: number) {
+    if (!isUnlocked(ch)) return;
     playPop();
     onSelect(ch);
   }
+
+  function doneCount(ch: number) {
+    return Object.keys(progress[ch] || {}).length;
+  }
+
+  const chapters = [
+    { ch: 1, icon: '🔤', name: 'Chapter 1', sub: 'Phonics', cls: 'ch1' },
+    { ch: 2, icon: '✏️', name: 'Chapter 2', sub: 'Trace', cls: 'ch2' },
+    { ch: 3, icon: '🖼️', name: 'Chapter 3', sub: 'Pictorial', cls: 'ch3' },
+  ];
 
   return (
     <div className="page-bg">
       <h2 className="page-title">Choose a Chapter 📚</h2>
       <div className="chapters-grid">
-        <button className="bubble chapter-btn ch1" onClick={() => pick(1)}>
-          <div className="ch-icon">🔤</div>
-          <div className="ch-name">Chapter 1</div>
-          <div className="ch-sub">Phonics</div>
-        </button>
-        <button className="bubble chapter-btn ch2" onClick={() => pick(2)}>
-          <div className="ch-icon">✏️</div>
-          <div className="ch-name">Chapter 2</div>
-          <div className="ch-sub">Trace</div>
-        </button>
-        <button className="bubble chapter-btn ch3" onClick={() => pick(3)}>
-          <div className="ch-icon">🖼️</div>
-          <div className="ch-name">Chapter 3</div>
-          <div className="ch-sub">Pictorial</div>
-        </button>
+        {chapters.map(({ ch, icon, name, sub, cls }) => {
+          const unlocked = isUnlocked(ch);
+          const done = doneCount(ch);
+          return (
+            <button key={ch} className={`bubble chapter-btn ${cls} ${!unlocked ? 'locked' : ''}`} onClick={() => pick(ch)}>
+              <div className="ch-icon">{unlocked ? icon : '🔒'}</div>
+              <div className="ch-name">{name}</div>
+              <div className="ch-sub">{unlocked ? sub : 'Complete Ch.1 & Ch.2 to unlock'}</div>
+              <div className="ch-progress">{done}/30 levels</div>
+            </button>
+          );
+        })}
       </div>
       <button className="bubble back-btn" onClick={onBack}>◀ Back</button>
     </div>

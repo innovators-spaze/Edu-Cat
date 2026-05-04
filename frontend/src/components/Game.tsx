@@ -9,9 +9,10 @@ interface Props {
   level: number;
   onLevels: () => void;
   onNextLevel: () => void;
+  onComplete: () => void;
 }
 
-export default function Game({ chapter, level, onLevels, onNextLevel }: Props) {
+export default function Game({ chapter, level, onLevels, onNextLevel, onComplete }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -39,6 +40,7 @@ export default function Game({ chapter, level, onLevels, onNextLevel }: Props) {
   }
 
   function next() {
+    if (qIndex >= questions.length - 1) onComplete();
     setFeedback(null); setChosen(null);
     setQIndex(i => i + 1);
   }
