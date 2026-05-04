@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../Sage-Flow/Edu-Cat/api"
+		},
+		{
+			"path": "../../Sage-Flow/Edu-Cat/backend"
+		},
+		{
+			"path": "../../Sage-Flow/Edu-Cat/deploy"
+		},
+		{
+			"path": "../../Sage-Flow/Edu-Cat/frontend"
+		}
+	]
+}
