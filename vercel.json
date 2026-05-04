@@ -2,11 +2,11 @@
   "version": 2,
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/index.js": { "memory": 512, "maxDuration": 15 }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/index.js": { "memory": 512, "maxDuration": 10 }
-  }
+  ]
 }
