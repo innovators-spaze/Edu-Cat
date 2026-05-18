@@ -110,7 +110,23 @@ Return ONLY a valid JSON array of exactly 10 questions, no markdown:
   {"type":"match_letter_sound","pairs":["C","D","E"]}
 ]`,
     2: `Generate exactly 10 letter tracing tasks for children at level ${level}/30. Levels 1-10: uppercase A-Z, 11-20: lowercase a-z, 21-30: mixed. Return ONLY JSON array:\n[{"type":"trace","letter":"A"}]`,
-    3: `Generate exactly 10 pictorial word-building questions for children at level ${level}/30. Levels 1-10: 3-letter words, 11-20: 4-letter, 21-30: longer with hints. Return ONLY JSON array:\n[{"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]}]`
+    3: `You are generating pictorial word-building questions for children aged 3-8. Level ${level} out of 30.
+
+Rules:
+- Levels 1-10: use simple 3-letter words only (cat, dog, sun, bus, hat, pig, hen, ant, bee, cow, egg, fan, jar, map, net, owl, pen, rat, top, van)
+- Levels 11-20: use 4-letter words (ball, frog, drum, crab, star, ship, fish, duck, cake, kite, lamp, milk, nest, ring, sock, tree, wolf, duck, frog, fish)
+- Levels 21-30: use 5-8 letter words with hint indices pre-filled (apple, grape, tiger, camel, plant, cloud, bread, chair, train, globe, orange, castle, flower, hammer, jungle, bridge, elephant, umbrella)
+- For levels 21-30: hint array must contain indices of pre-filled letters (first and last letter minimum)
+- jumbled must contain ONLY the non-hint letters shuffled
+- img must be the lowercase word
+- word must be UPPERCASE
+- Use DIFFERENT words each level, randomize selection
+
+Return ONLY a valid JSON array of exactly 10 questions, no markdown:
+[
+  {"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]},
+  {"type":"pictorial_partial","word":"ELEPHANT","img":"elephant","jumbled":["L","P","H","N","A"],"hint":[0,2,4,7]}
+]`
   };
   const res = await groq.chat.completions.create({
     model: 'llama3-8b-8192',
@@ -146,8 +162,8 @@ module.exports = async (req, res) => {
       return res.status(404).json({ error: 'Not found' });
 
     const key = `${chapter}_${level}`;
-    // Don't cache Ch1 — always fresh AI questions
-    if (cache.has(key) && chapter !== 1) return res.json(cache.get(key));
+    // Don't cache Ch1 or Ch3 — always fresh AI questions
+    if (cache.has(key) && chapter !== 1 && chapter !== 3) return res.json(cache.get(key));
 
     try {
       if (process.env.GROQ_API_KEY) {
