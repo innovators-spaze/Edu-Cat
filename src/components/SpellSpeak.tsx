@@ -20,9 +20,9 @@ interface Props { level: number; onLevels: () => void; onNextLevel: () => void; 
 
 function buildQuestions(level: number) {
   if (level <= 10) {
-    // Single letter pronunciation — 10 letters per level cycling through alphabet
+    // Single letter pronunciation — same UI as spell mode but target is one letter
     return Array.from({ length: 10 }, (_, i) => ({
-      type: 'pronounce' as const,
+      type: 'spell' as const,
       target: LETTERS[(((level - 1) * 10) + i) % 26],
     }));
   } else {
@@ -68,7 +68,8 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
   }
 
   function playTarget() {
-    if (q.type === 'pronounce') speak(q.target, 0.7);
+    // For single letters speak slowly, for words spell letter by letter
+    if (q.target.length === 1) speak(q.target, 0.6);
     else speak(q.target.split('').join('... '), 0.6);
   }
 
@@ -183,15 +184,11 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
       <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length} · ⭐ {score}</div>
 
       <div className="spell-card">
-        {q.type === 'pronounce' ? (
+        {q.type === 'spell' && (
           <>
-            <div className="spell-instruction">Say this letter out loud! 🗣️</div>
-            <div className="spell-big-letter" onClick={playTarget}>{q.target}</div>
-            <div className="spell-sub">{q.target.toLowerCase()} — tap to hear</div>
-          </>
-        ) : (
-          <>
-            <div className="spell-instruction">Spell this word letter by letter! 🔤</div>
+            <div className="spell-instruction">
+              {q.target.length === 1 ? 'Say this letter out loud! 🗣️' : 'Spell this word letter by letter! 🔤'}
+            </div>
             <div className="spell-word" onClick={playTarget}>{q.target}</div>
             <div className="spell-letters-row">
               {q.target.split('').map((ch, i) => (

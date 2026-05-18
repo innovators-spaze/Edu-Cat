@@ -190,7 +190,7 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
                     className={`bubble match-sound ${matched.includes(l) ? 'match-done' : ''} ${wrongPair === l ? 'wrong shake' : ''}`}
                     onClick={() => !matched.includes(l) && matchSoundClick(l)}
                     disabled={matched.includes(l)}>
-                    🔊
+                    <span style={{fontSize:'1.6rem'}}>🔊</span>
                   </button>
                 ))}
               </div>
