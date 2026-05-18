@@ -9,9 +9,10 @@ import Levels from './components/Levels';
 import Game from './components/Game';
 import Trace from './components/Trace';
 import Pictorial from './components/Pictorial';
+import SpellSpeak from './components/SpellSpeak';
 import './App.css';
 
-type Screen = 'splash' | 'auth' | 'home' | 'chapters' | 'levels' | 'game' | 'trace' | 'pictorial';
+type Screen = 'splash' | 'auth' | 'home' | 'chapters' | 'levels' | 'game' | 'trace' | 'pictorial' | 'spell';
 
 // progress[chapter][level] = stars (1-3), 0 = attempted but no stars
 type Progress = Record<number, Record<number, number>>;
@@ -23,7 +24,7 @@ export default function App() {
   const [splashDone, setSplashDone] = useState(false);
   const [chapter, setChapter] = useState(1);
   const [level, setLevel] = useState(1);
-  const [progress, setProgress] = useState<Progress>({ 1: {}, 2: {}, 3: {} });
+  const [progress, setProgress] = useState<Progress>({ 1: {}, 2: {}, 3: {}, 4: {} });
   const [lastScore, setLastScore] = useState(0);
 
   useEffect(() => {
@@ -64,7 +65,10 @@ export default function App() {
     if (ch <= 2) return true;
     const ch1Done = Object.keys(progress[1] || {}).length >= 30;
     const ch2Done = Object.keys(progress[2] || {}).length >= 30;
-    return ch1Done && ch2Done;
+    if (ch === 3) return ch1Done && ch2Done;
+    // Chapter 4 unlocked when ch1+ch2+ch3 all done
+    const ch3Done = Object.keys(progress[3] || {}).length >= 30;
+    return ch1Done && ch2Done && ch3Done;
   }
 
   function selectChapter(ch: number) {
@@ -76,7 +80,8 @@ export default function App() {
     setLevel(lvl);
     if (chapter === 1) setScreen('game');
     else if (chapter === 2) setScreen('trace');
-    else setScreen('pictorial');
+    else if (chapter === 3) setScreen('pictorial');
+    else setScreen('spell');
   }
 
   function nextLevel() {
@@ -103,6 +108,7 @@ export default function App() {
       {screen === 'game'      && <Game chapter={chapter} level={level} onLevels={() => setScreen('levels')} onNextLevel={nextLevel} onComplete={handleLevelComplete} />}
       {screen === 'trace'     && <Trace level={level} onLevels={() => setScreen('levels')} onNextLevel={nextLevel} onComplete={handleLevelComplete} />}
       {screen === 'pictorial' && <Pictorial level={level} onLevels={() => setScreen('levels')} onNextLevel={nextLevel} onComplete={handleLevelComplete} />}
+      {screen === 'spell'     && <SpellSpeak level={level} onLevels={() => setScreen('levels')} onNextLevel={nextLevel} onComplete={handleLevelComplete} />}
     </div>
   );
 }

@@ -24,6 +24,7 @@ export default function Chapters({ onSelect, onBack, isUnlocked, progress }: Pro
     { ch: 1, icon: '🔤', name: 'Chapter 1', sub: 'Phonics', cls: 'ch1' },
     { ch: 2, icon: '✏️', name: 'Chapter 2', sub: 'Trace', cls: 'ch2' },
     { ch: 3, icon: '🖼️', name: 'Chapter 3', sub: 'Pictorial', cls: 'ch3' },
+    { ch: 4, icon: '🎤', name: 'Chapter 4', sub: 'Spell & Speak', cls: 'ch4' },
   ];
 
   return (
@@ -37,7 +38,7 @@ export default function Chapters({ onSelect, onBack, isUnlocked, progress }: Pro
             <button key={ch} className={`bubble chapter-btn ${cls} ${!unlocked ? 'locked' : ''}`} onClick={() => pick(ch)}>
               <div className="ch-icon">{unlocked ? icon : '🔒'}</div>
               <div className="ch-name">{name}</div>
-              <div className="ch-sub">{unlocked ? sub : 'Complete Ch.1 & Ch.2 to unlock'}</div>
+              <div className="ch-sub">{unlocked ? sub : ch === 4 ? 'Complete Ch.1, 2 & 3 to unlock' : 'Complete Ch.1 & Ch.2 to unlock'}</div>
               <div className="ch-progress">{done}/30 levels</div>
             </button>
           );

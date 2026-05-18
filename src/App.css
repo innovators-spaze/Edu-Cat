@@ -114,6 +114,7 @@ body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; overflow: hidden;
 .ch1 { background: linear-gradient(135deg, #f97316, #ef4444); }
 .ch2 { background: linear-gradient(135deg, #3b82f6, #6366f1); }
 .ch3 { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.ch4 { background: linear-gradient(135deg, #ec4899, #a855f7); }
 .ch-icon { font-size: 2.5rem; } .ch-name { font-size: 1.3rem; } .ch-sub { font-size: 0.95rem; opacity: 0.85; }
 .ch-progress { font-size: 0.8rem; opacity: 0.75; margin-top: 4px; }
 .locked { background: linear-gradient(135deg, #9ca3af, #6b7280) !important; cursor: not-allowed; filter: grayscale(0.4); }
@@ -218,3 +219,24 @@ body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; overflow: hidden;
   .big-letter { font-size: 4rem; }
   .levels-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* Spell & Speak */
+.spell-bg { background: linear-gradient(160deg, #fdf4ff 0%, #e0f2fe 50%, #fce7f3 100%); }
+.spell-card { background: white; border-radius: 28px; padding: 24px 20px; width: 100%; max-width: 400px; box-shadow: 0 12px 40px rgba(168,85,247,0.2); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.spell-instruction { font-size: 1rem; color: #6b7280; font-weight: bold; text-align: center; }
+.spell-big-letter { font-size: 7rem; font-weight: 900; color: var(--purple); text-shadow: 4px 4px 0 rgba(168,85,247,0.2); cursor: pointer; animation: float 2s ease-in-out infinite alternate; line-height: 1; }
+.spell-sub { font-size: 1rem; color: #9ca3af; }
+.spell-word { font-size: 3.5rem; font-weight: 900; color: var(--orange); text-shadow: 3px 3px 0 rgba(249,115,22,0.2); cursor: pointer; letter-spacing: 6px; }
+.spell-letters-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.spell-letter-box { width: 42px; height: 42px; border: 3px solid #e9d5ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 900; color: var(--purple); background: #fdf4ff; }
+.spell-correct-box { border-color: var(--green); background: #dcfce7; color: var(--green); }
+.spell-wrong-box { border-color: #ef4444; background: #fee2e2; color: #ef4444; }
+.spell-accuracy { font-size: 1.1rem; font-weight: bold; padding: 8px 20px; border-radius: 50px; }
+.acc-good { background: #dcfce7; color: #16a34a; }
+.acc-bad  { background: #fee2e2; color: #dc2626; }
+.spell-heard { font-size: 0.95rem; color: #4b5563; text-align: center; }
+.spell-hint { font-size: 0.9rem; color: #f97316; text-align: center; background: #fff7ed; padding: 8px 14px; border-radius: 12px; }
+.spell-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.mic-btn { background: linear-gradient(135deg, #ec4899, #a855f7); font-size: 1.2rem; padding: 16px 32px; }
+.mic-active { background: linear-gradient(135deg, #ef4444, #dc2626) !important; animation: micPulse 0.8s ease-in-out infinite; }
+@keyframes micPulse { 0%,100% { transform: scale(1); box-shadow: 0 6px 0 rgba(0,0,0,0.2); } 50% { transform: scale(1.08); box-shadow: 0 10px 20px rgba(239,68,68,0.5); } }
