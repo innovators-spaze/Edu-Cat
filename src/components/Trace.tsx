@@ -12,9 +12,8 @@ interface Props { level: number; onLevels: () => void; onNextLevel: () => void; 
 function getTraceMessage(accuracy: number): { msg: string; emoji: string; ok: boolean } {
   if (accuracy >= 90) return { msg: 'Excellent tracing! 🌟', emoji: '🏆', ok: true };
   if (accuracy >= 75) return { msg: 'Great job! Keep it up! 👍', emoji: '⭐', ok: true };
-  if (accuracy >= 55) return { msg: 'Good try! Trace more carefully!', emoji: '😊', ok: true };
-  if (accuracy >= 35) return { msg: 'Try staying inside the line! ✏️', emoji: '🙂', ok: false };
-  if (accuracy >= 15) return { msg: 'Follow the dotted letter shape!', emoji: '👆', ok: false };
+  if (accuracy >= 50) return { msg: 'Try staying inside the line! ✏️', emoji: '🙂', ok: false };
+  if (accuracy >= 25) return { msg: 'Follow the dotted letter shape!', emoji: '👆', ok: false };
   return { msg: 'Trace the full letter outline!', emoji: '✏️', ok: false };
 }
 
@@ -200,7 +199,7 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
           <span className="trace-fb-msg">{traceMsg.msg}</span>
           {accuracy !== null && (
             <div className="trace-accuracy-bar">
-              <div className="trace-accuracy-fill" style={{ width: `${accuracy}%`, background: accuracy >= 55 ? '#22c55e' : accuracy >= 35 ? '#f97316' : '#ef4444' }} />
+              <div className="trace-accuracy-fill" style={{ width: `${accuracy}%`, background: accuracy >= 75 ? '#22c55e' : accuracy >= 50 ? '#f97316' : '#ef4444' }} />
               <span className="trace-accuracy-label">{accuracy}% accuracy</span>
             </div>
           )}
