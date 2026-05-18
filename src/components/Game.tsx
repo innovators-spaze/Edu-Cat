@@ -35,11 +35,14 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
     setQIndex(0); setScore(0);
     setChosen(null); setWrongChosen(null); setFeedback(null);
     setLoading(false);
-    // Upgrade with AI questions in background
-    fetch(`${API}/questions/${chapter}/${level}`)
-      .then(r => r.json())
-      .then(d => { if (d.questions?.length) setQuestions(d.questions); })
-      .catch(() => {});
+    // Only upgrade with AI for chapters 2 and 3, not chapter 1
+    // Chapter 1 uses static questions to avoid match sound button issues
+    if (chapter !== 1) {
+      fetch(`${API}/questions/${chapter}/${level}`)
+        .then(r => r.json())
+        .then(d => { if (d.questions?.length) setQuestions(d.questions); })
+        .catch(() => {});
+    }
   }, [chapter, level]);
 
   useEffect(() => {
