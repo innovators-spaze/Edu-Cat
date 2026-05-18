@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { Question } from '../types';
 import Feedback from './Feedback';
 
+import { staticQuestions } from '../questions';
+
 const API = '/api';
 
 const EMOJI: Record<string, string> = {
@@ -34,10 +36,13 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(false);
+    setQuestions(staticQuestions(3, level));
+    setQIndex(0); setScore(0);
     fetch(`${API}/questions/3/${level}`)
       .then(r => r.json())
-      .then(d => { setQuestions(d.questions); setQIndex(0); setScore(0); setLoading(false); });
+      .then(d => { if (d.questions?.length) setQuestions(d.questions); })
+      .catch(() => {});
   }, [level]);
 
   useEffect(() => {

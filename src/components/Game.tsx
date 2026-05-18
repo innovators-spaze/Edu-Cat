@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { Question } from '../types';
 import Feedback from './Feedback';
 
+import { staticQuestions } from '../questions';
+
 const API = '/api';
 
 interface Props {
@@ -27,15 +29,16 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
   const [wrongPair, setWrongPair] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
+    // Load instantly from static generator
+    setQuestions(staticQuestions(chapter, level));
+    setQIndex(0); setScore(0);
+    setChosen(null); setWrongChosen(null); setFeedback(null);
+    setLoading(false);
+    // Upgrade with AI questions in background
     fetch(`${API}/questions/${chapter}/${level}`)
       .then(r => r.json())
-      .then(d => {
-        setQuestions(d.questions);
-        setQIndex(0); setScore(0);
-        setChosen(null); setWrongChosen(null); setFeedback(null);
-        setLoading(false);
-      });
+      .then(d => { if (d.questions?.length) setQuestions(d.questions); })
+      .catch(() => {});
   }, [chapter, level]);
 
   useEffect(() => {

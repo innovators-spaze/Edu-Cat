@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import type { Question } from '../types';
 import Feedback from './Feedback';
 
+import { staticQuestions } from '../questions';
+
 const API = '/api';
 
 interface Props { level: number; onLevels: () => void; onNextLevel: () => void; onComplete: (score: number) => void; }
@@ -33,9 +35,12 @@ export default function Trace({ level, onLevels, onNextLevel, onComplete }: Prop
   const strokePixels = useRef(0);
 
   useEffect(() => {
+    setQuestions(staticQuestions(2, level));
+    setQIndex(0); setScore(0);
     fetch(`${API}/questions/2/${level}`)
       .then(r => r.json())
-      .then(d => { setQuestions(d.questions); setQIndex(0); setScore(0); });
+      .then(d => { if (d.questions?.length) setQuestions(d.questions); })
+      .catch(() => {});
   }, [level]);
 
   useEffect(() => {
