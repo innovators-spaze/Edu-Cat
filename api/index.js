@@ -1,4 +1,4 @@
-const Groq = require('groq-sdk');
+import Groq from 'groq-sdk';
 
 const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const PHONICS_TIERS = [
@@ -93,40 +93,23 @@ async function groqQuestions(chapter, level) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const prompts = {
     1: `You are generating phonics questions for children aged 3-8. Level ${level} out of 30 (higher = harder).
-
 Rules:
 - Levels 1-10: use only simple letters A,E,I,O,U,B,C,D,F,G,H,M,N,P,R,S,T
 - Levels 11-20: use full alphabet except Q,X,Z
 - Levels 21-30: use full alphabet including Q,X,Z
 - Mix ALL 3 types: roughly 4 sound_from_letter, 3 letter_from_sound, 3 match_letter_sound
-- Each level must use DIFFERENT letters from previous levels (vary randomization)
 - Options must have exactly 4 choices with 1 correct
 - match_letter_sound pairs: ${level <= 10 ? 3 : level <= 20 ? 4 : 5} pairs
-
 Return ONLY a valid JSON array of exactly 10 questions, no markdown:
-[
-  {"type":"sound_from_letter","letter":"A","options":["A","B","C","D"],"correct":"A"},
-  {"type":"letter_from_sound","letter":"B","options":["A","B","C","D"],"correct":"B"},
-  {"type":"match_letter_sound","pairs":["C","D","E"]}
-]`,
-    2: `Generate exactly 10 letter tracing tasks for children at level ${level}/30. Levels 1-10: uppercase A-Z, 11-20: lowercase a-z, 21-30: mixed. Return ONLY JSON array:\n[{"type":"trace","letter":"A"}]`,
+[{"type":"sound_from_letter","letter":"A","options":["A","B","C","D"],"correct":"A"},{"type":"letter_from_sound","letter":"B","options":["A","B","C","D"],"correct":"B"},{"type":"match_letter_sound","pairs":["C","D","E"]}]`,
+    2: `Generate exactly 10 letter tracing tasks for children at level ${level}/30. Levels 1-10: uppercase A-Z, 11-20: lowercase a-z, 21-30: mixed. Return ONLY JSON array:[{"type":"trace","letter":"A"}]`,
     3: `You are generating pictorial word-building questions for children aged 3-8. Level ${level} out of 30.
-
 Rules:
-- Levels 1-10: use simple 3-letter words only (cat, dog, sun, bus, hat, pig, hen, ant, bee, cow, egg, fan, jar, map, net, owl, pen, rat, top, van)
-- Levels 11-20: use 4-letter words (ball, frog, drum, crab, star, ship, fish, duck, cake, kite, lamp, milk, nest, ring, sock, tree, wolf, duck, frog, fish)
-- Levels 21-30: use 5-8 letter words with hint indices pre-filled (apple, grape, tiger, camel, plant, cloud, bread, chair, train, globe, orange, castle, flower, hammer, jungle, bridge, elephant, umbrella)
-- For levels 21-30: hint array must contain indices of pre-filled letters (first and last letter minimum)
-- jumbled must contain ONLY the non-hint letters shuffled
-- img must be the lowercase word
-- word must be UPPERCASE
-- Use DIFFERENT words each level, randomize selection
-
+- Levels 1-10: 3-letter words only
+- Levels 11-20: 4-letter words
+- Levels 21-30: 5-8 letter words with hint indices
 Return ONLY a valid JSON array of exactly 10 questions, no markdown:
-[
-  {"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]},
-  {"type":"pictorial_partial","word":"ELEPHANT","img":"elephant","jumbled":["L","P","H","N","A"],"hint":[0,2,4,7]}
-]`
+[{"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]},{"type":"pictorial_partial","word":"ELEPHANT","img":"elephant","jumbled":["L","P","H","N","A"],"hint":[0,2,4,7]}]`
   };
   const res = await groq.chat.completions.create({
     model: 'llama3-8b-8192',
@@ -134,8 +117,7 @@ Return ONLY a valid JSON array of exactly 10 questions, no markdown:
       { role: 'system', content: 'You are a children\'s educational question generator. Return only valid JSON arrays, no markdown, no explanation.' },
       { role: 'user', content: prompts[chapter] }
     ],
-    temperature: 0.9,
-    max_tokens: 2000,
+    temperature: 0.9, max_tokens: 2000,
   });
   const text = res.choices[0].message.content.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   const questions = JSON.parse(text);
@@ -145,15 +127,13 @@ Return ONLY a valid JSON array of exactly 10 questions, no markdown:
 
 const cache = new Map();
 
-module.exports = async (req, res) => {
+export default async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = req.url || '';
-
-  // GET /api/questions/:chapter/:level
   const qMatch = url.match(/\/api\/questions\/(\d+)\/(\d+)/);
   if (req.method === 'GET' && qMatch) {
     const chapter = parseInt(qMatch[1]);
@@ -162,7 +142,6 @@ module.exports = async (req, res) => {
       return res.status(404).json({ error: 'Not found' });
 
     const key = `${chapter}_${level}`;
-    // Don't cache Ch1 or Ch3 — always fresh AI questions
     if (cache.has(key) && chapter !== 1 && chapter !== 3) return res.json(cache.get(key));
 
     try {
