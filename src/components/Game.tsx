@@ -25,8 +25,9 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
 
   // Match state
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
-  const [matched, setMatched] = useState<string[]>([]); // correctly matched letters
+  const [matched, setMatched] = useState<string[]>([]);
   const [wrongPair, setWrongPair] = useState<string | null>(null);
+  const [shuffledSounds, setShuffledSounds] = useState<string[]>([]);
 
   useEffect(() => {
     // Load instantly from static generator
@@ -43,7 +44,9 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
 
   useEffect(() => {
     setSelectedLetter(null); setMatched([]); setWrongPair(null);
-  }, [qIndex]);
+    const q = questions[qIndex];
+    if (q?.pairs) setShuffledSounds(shuffle([...q.pairs]));
+  }, [qIndex, questions]);
 
   function speak(text: string) {
     speechSynthesis.cancel();
@@ -182,12 +185,12 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
               </div>
               <div className="match-col">
                 <div className="match-col-label">Sounds</div>
-                {q.pairs && shuffle([...q.pairs]).map(l => (
+                {shuffledSounds.map(l => (
                   <button key={l}
                     className={`bubble match-sound ${matched.includes(l) ? 'match-done' : ''} ${wrongPair === l ? 'wrong shake' : ''}`}
                     onClick={() => !matched.includes(l) && matchSoundClick(l)}
                     disabled={matched.includes(l)}>
-                    🔊 {l}
+                    🔊
                   </button>
                 ))}
               </div>
