@@ -61,14 +61,8 @@ export default function App() {
     });
   }
 
-  function isChapterUnlocked(ch: number) {
-    if (ch <= 2) return true;
-    const ch1Done = Object.keys(progress[1] || {}).length >= 30;
-    const ch2Done = Object.keys(progress[2] || {}).length >= 30;
-    if (ch === 3) return ch1Done && ch2Done;
-    // Chapter 4 unlocked when ch1+ch2+ch3 all done
-    const ch3Done = Object.keys(progress[3] || {}).length >= 30;
-    return ch1Done && ch2Done && ch3Done;
+  function isChapterUnlocked(_ch: number) {
+    return true;
   }
 
   function selectChapter(ch: number) {
