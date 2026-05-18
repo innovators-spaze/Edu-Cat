@@ -4,7 +4,7 @@ interface Props {
   onSelect: (ch: number) => void;
   onBack: () => void;
   isUnlocked: (ch: number) => boolean;
-  progress: Record<number, Record<number, boolean>>;
+  progress: Record<number, Record<number, number>>;
 }
 
 export default function Chapters({ onSelect, onBack, isUnlocked, progress }: Props) {

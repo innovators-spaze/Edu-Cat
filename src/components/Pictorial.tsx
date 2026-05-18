@@ -79,10 +79,9 @@ export default function Pictorial({ level, onLevels, onNextLevel, onComplete }: 
     const newAns = [...answer];
     // If box already filled, return that letter to pool
     const prev = newAns[box];
-    let newUsed = prev
-      ? usedIdx.filter(i => !(questions[qIndex].jumbled![i] === prev && !newUsed?.includes(i)))
+    let newUsed: number[] = prev
+      ? usedIdx.filter(i => questions[qIndex].jumbled![i] !== prev)
       : [...usedIdx];
-    newUsed = usedIdx.filter(i => !(newAns[box] && questions[qIndex].jumbled![i] === newAns[box]));
     newAns[box] = ch;
     newUsed = [...newUsed, li];
     setAnswer(newAns); setUsedIdx(newUsed); setSelectedBox(-1);
