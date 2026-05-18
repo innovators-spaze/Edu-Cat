@@ -50,7 +50,11 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
   const q = questions[qIndex];
   const isLast = qIndex >= questions.length - 1;
 
-  useEffect(() => { resetQ(); }, [qIndex]);
+  useEffect(() => {
+    resetQ();
+    // Auto-play the target so child knows what to say
+    setTimeout(() => playTarget(), 600);
+  }, [qIndex]);
 
   function resetQ() {
     setHeard(''); setAccuracy(null); setFeedback(null); setHint(''); setSpokenLetters([]);
@@ -71,20 +75,46 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
   function calcAccuracy(spoken: string, target: string): number {
     const s = spoken.toUpperCase().trim();
     const t = target.toUpperCase().trim();
-    if (s === t) return 100;
-    // Check if spoken contains the target
-    if (s.includes(t)) return 90;
-    // Letter-by-letter match for spell mode
-    if (q.type === 'spell') {
-      const spokenChars = s.replace(/\s+/g, '').split('');
-      const targetChars = t.split('');
-      let matches = 0;
-      targetChars.forEach((ch, i) => { if (spokenChars[i] === ch) matches++; });
-      return Math.round((matches / targetChars.length) * 100);
+
+    if (q.type === 'pronounce') {
+      // Speech recognition returns words not letters
+      // e.g. saying "A" may return "a", "hey", "the letter a", "ay"
+      // Check multiple ways the letter sound could be recognised
+      if (s === t) return 100;
+      if (s.startsWith(t + ' ') || s.endsWith(' ' + t) || s.includes(' ' + t + ' ')) return 100;
+      // "the letter X" or "letter X"
+      if (s.includes('LETTER ' + t) || s.includes(t + ' IS')) return 100;
+      // First word matches
+      const firstWord = s.split(' ')[0];
+      if (firstWord === t) return 100;
+      // Single char spoken matches
+      if (s.replace(/\s/g, '') === t) return 100;
+      // Phonetic map for tricky letters
+      const PHONETIC: Record<string, string[]> = {
+        A: ['AY','EY','HEY','A'], B: ['BEE','BE'], C: ['SEE','CEE','SEA'],
+        D: ['DEE','DI'], E: ['EE','EH'], F: ['EF','EFF'],
+        G: ['GEE','JEE'], H: ['AITCH','HAITCH','HEY'],
+        I: ['EYE','AYE','I'], J: ['JAY','JEY'], K: ['KAY','KEY'],
+        L: ['EL','ELL'], M: ['EM','EMM'], N: ['EN','INN'],
+        O: ['OH','OW','O'], P: ['PEE','PI'], Q: ['CUE','KYU','QUE'],
+        R: ['AR','ARE'], S: ['ESS','ES'], T: ['TEE','TI'],
+        U: ['YOU','YEW','EWE','U'], V: ['VEE','VI'],
+        W: ['DOUBLE YOU','DOUBLE U'], X: ['EX','ECKS'],
+        Y: ['WHY','WYE'], Z: ['ZEE','ZED','ZI'],
+      };
+      const alts = PHONETIC[t] || [];
+      if (alts.some(alt => s.includes(alt))) return 100;
+      // Partial — first letter matches
+      if (firstWord[0] === t[0]) return 65;
+      return 20;
     }
-    // Phonetic similarity for pronounce mode
-    if (s.startsWith(t[0]) || t.startsWith(s[0])) return 60;
-    return 20;
+
+    // Spell mode — letter by letter
+    const spokenChars = s.replace(/\s+/g, '').split('');
+    const targetChars = t.split('');
+    let matches = 0;
+    targetChars.forEach((ch, i) => { if (spokenChars[i] === ch) matches++; });
+    return Math.round((matches / targetChars.length) * 100);
   }
 
   function startListening() {
@@ -117,11 +147,17 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
       if (ok) {
         setScore(s => s + 1);
         speak('Awesome! Great job!', 1.1);
+        setTimeout(() => setFeedback(true), 400);
       } else {
         speak('Try again! You can do it!', 0.9);
-        setHint(`💡 You said "${transcript}". Expected "${q.target}". Try again!`);
+        if (q.type === 'pronounce') {
+          setHint(`💡 You said "${transcript}". Try saying the letter sound clearly!`);
+          // Don't show feedback overlay for pronounce — let them retry
+        } else {
+          setHint(`💡 You said "${transcript}". Expected "${q.target}". Try again!`);
+          setTimeout(() => setFeedback(false), 400);
+        }
       }
-      setTimeout(() => setFeedback(ok), 400);
     };
     recog.start();
   }
