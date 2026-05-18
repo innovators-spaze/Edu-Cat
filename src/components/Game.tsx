@@ -184,7 +184,7 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
                 ))}
               </div>
               <div className="match-col">
-                <div className="match-col-label">Sounds</div>
+                <div className="match-col-label">Sounds 🔊</div>
                 {shuffledSounds.map(l => (
                   <button key={l}
                     className={`bubble match-sound ${matched.includes(l) ? 'match-done' : ''} ${wrongPair === l ? 'wrong shake' : ''}`}
