@@ -19,30 +19,74 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
   const [chosen, setChosen] = useState<string | null>(null);
   const [wrongChosen, setWrongChosen] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Match state
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [matched, setMatched] = useState<string[]>([]); // correctly matched letters
+  const [wrongPair, setWrongPair] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`${API}/questions/${chapter}/${level}`)
       .then(r => r.json())
-      .then(d => { setQuestions(d.questions); setQIndex(0); setScore(0); setChosen(null); setWrongChosen(null); setFeedback(null); });
+      .then(d => {
+        setQuestions(d.questions);
+        setQIndex(0); setScore(0);
+        setChosen(null); setWrongChosen(null); setFeedback(null);
+        setLoading(false);
+      });
   }, [chapter, level]);
 
+  useEffect(() => {
+    setSelectedLetter(null); setMatched([]); setWrongPair(null);
+  }, [qIndex]);
+
   function speak(text: string) {
+    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.8; u.pitch = 1.2;
+    u.rate = 0.7; u.pitch = 1.3;
     speechSynthesis.speak(u);
   }
 
   function selectOpt(opt: string, correct: string) {
-    if (chosen) return; // already answered correctly
+    if (chosen) return;
     const ok = opt === correct;
     if (ok) {
       setChosen(opt);
       setScore(s => s + 1);
+      speak('Correct!');
       setTimeout(() => setFeedback(true), 300);
     } else {
-      // Show red shake, then clear so they can retry
       setWrongChosen(opt);
+      speak('Try again!');
       setTimeout(() => setWrongChosen(null), 700);
+    }
+  }
+
+  function matchLetterClick(letter: string) {
+    speak(letter);
+    setSelectedLetter(letter);
+  }
+
+  function matchSoundClick(letter: string) {
+    if (!selectedLetter) { speak(letter); return; }
+    if (selectedLetter === letter) {
+      // Correct match
+      const newMatched = [...matched, letter];
+      setMatched(newMatched);
+      setSelectedLetter(null);
+      speak('Correct!');
+      // All matched — auto submit as correct
+      if (newMatched.length === questions[qIndex].pairs?.length) {
+        setScore(s => s + 1);
+        setTimeout(() => setFeedback(true), 500);
+      }
+    } else {
+      // Wrong match
+      setWrongPair(letter);
+      speak('Try again!');
+      setTimeout(() => { setWrongPair(null); setSelectedLetter(null); }, 700);
     }
   }
 
@@ -57,7 +101,14 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
     setQIndex(i => Math.max(0, i - 1));
   }
 
-  if (!questions.length) return <div className="page-bg"><div className="page-title">Loading... ⏳</div></div>;
+  if (loading) return (
+    <div className="page-bg">
+      <div className="loading-box">
+        <div className="loading-cat">🐱</div>
+        <div className="loading-text">Loading questions... ⏳</div>
+      </div>
+    </div>
+  );
 
   const q = questions[qIndex];
   const isLast = qIndex >= questions.length - 1;
@@ -72,10 +123,12 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
     <div className="page-bg">
       <div className="progress-bar">Level {level} · Q {qIndex + 1}/{questions.length} · ⭐ {score}</div>
       <div className="game-area">
+
         {q.type === 'sound_from_letter' && (
           <>
-            <div className="q-label">Which sound does this letter make?</div>
-            <div className="big-letter">{q.letter}{q.letter?.toLowerCase()}</div>
+            <div className="q-label">🔊 Which sound does this letter make?</div>
+            <div className="big-letter" onClick={() => speak(q.letter!)}>{q.letter}{q.letter?.toLowerCase()}</div>
+            <div className="q-sublabel">👆 Tap letter to hear it</div>
             <div className="options-grid">
               {q.options?.map(opt => (
                 <button key={opt}
@@ -89,10 +142,13 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
             </div>
           </>
         )}
+
         {q.type === 'letter_from_sound' && (
           <>
-            <div className="q-label">Hear the sound and pick the correct letter!</div>
-            <button className="bubble play-btn" onClick={() => speak(q.letter!)}>🔊 Play Sound</button>
+            <div className="q-label">👂 Hear the sound — pick the correct letter!</div>
+            <button className="bubble play-btn" onClick={() => speak(q.letter!)}>
+              🔊 Play Sound
+            </button>
             <div className="options-grid">
               {q.options?.map(opt => (
                 <button key={opt}
@@ -105,23 +161,43 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
             </div>
           </>
         )}
+
         {q.type === 'match_letter_sound' && (
           <>
-            <div className="q-label">Match each letter to its sound!</div>
+            <div className="q-label">🔗 Tap a letter, then tap its matching sound!</div>
             <div className="match-table">
               <div className="match-col">
-                {q.pairs?.map(l => <div key={l} className="match-letter bubble">{l}{l.toLowerCase()}</div>)}
+                <div className="match-col-label">Letters</div>
+                {q.pairs?.map(l => (
+                  <button key={l}
+                    className={`bubble match-letter ${selectedLetter === l ? 'match-selected' : ''} ${matched.includes(l) ? 'match-done' : ''}`}
+                    onClick={() => !matched.includes(l) && matchLetterClick(l)}
+                    disabled={matched.includes(l)}>
+                    {l}{l.toLowerCase()}
+                  </button>
+                ))}
               </div>
               <div className="match-col">
-                {q.pairs?.map(l => (
-                  <button key={l} className="bubble match-sound" onClick={() => speak(l)}>🔊</button>
+                <div className="match-col-label">Sounds</div>
+                {q.pairs && shuffle([...q.pairs]).map(l => (
+                  <button key={l}
+                    className={`bubble match-sound ${matched.includes(l) ? 'match-done' : ''} ${wrongPair === l ? 'wrong shake' : ''}`}
+                    onClick={() => !matched.includes(l) && matchSoundClick(l)}
+                    disabled={matched.includes(l)}>
+                    🔊 {l}
+                  </button>
                 ))}
               </div>
             </div>
-            <button className="bubble submit-btn" onClick={() => { setScore(s => s + 1); setFeedback(true); }}>Submit ✅</button>
+            {selectedLetter && <div className="match-hint">Now tap the 🔊 sound for <strong>{selectedLetter}</strong></div>}
+            {matched.length > 0 && matched.length < (q.pairs?.length || 0) && (
+              <div className="match-progress">{matched.length}/{q.pairs?.length} matched ✅</div>
+            )}
           </>
         )}
+
       </div>
+
       {feedback !== null && (
         <Feedback correct={feedback} qIndex={qIndex} totalQ={questions.length}
           onNext={next} onPrev={prev} onLevels={onLevels}
@@ -130,4 +206,13 @@ export default function Game({ chapter, level, onLevels, onNextLevel, onComplete
       <button className="bubble back-btn" onClick={onLevels}>◀ Levels</button>
     </div>
   );
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

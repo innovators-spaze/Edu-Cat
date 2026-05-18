@@ -92,17 +92,34 @@ function staticQuestions(chapter, level) {
 async function groqQuestions(chapter, level) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const prompts = {
-    1: `Generate exactly 10 phonics questions for children (level ${level}/30). Mix: sound_from_letter, letter_from_sound, match_letter_sound. Return ONLY JSON array:\n[{"type":"sound_from_letter","letter":"A","options":["A","B","C","D"],"correct":"A"},{"type":"letter_from_sound","letter":"B","options":["A","B","C","D"],"correct":"B"},{"type":"match_letter_sound","pairs":["C","D","E","F","G"]}]`,
-    2: `Generate exactly 10 letter tracing tasks for children (level ${level}/30). Levels 1-10: uppercase, 11-20: lowercase, 21-30: mixed. Return ONLY JSON array:\n[{"type":"trace","letter":"A"}]`,
-    3: `Generate exactly 10 pictorial word-building questions for children (level ${level}/30). Levels 1-10: 3-letter words, 11-20: 4-letter, 21-30: longer with hints. Return ONLY JSON array:\n[{"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]}]`
+    1: `You are generating phonics questions for children aged 3-8. Level ${level} out of 30 (higher = harder).
+
+Rules:
+- Levels 1-10: use only simple letters A,E,I,O,U,B,C,D,F,G,H,M,N,P,R,S,T
+- Levels 11-20: use full alphabet except Q,X,Z
+- Levels 21-30: use full alphabet including Q,X,Z
+- Mix ALL 3 types: roughly 4 sound_from_letter, 3 letter_from_sound, 3 match_letter_sound
+- Each level must use DIFFERENT letters from previous levels (vary randomization)
+- Options must have exactly 4 choices with 1 correct
+- match_letter_sound pairs: ${level <= 10 ? 3 : level <= 20 ? 4 : 5} pairs
+
+Return ONLY a valid JSON array of exactly 10 questions, no markdown:
+[
+  {"type":"sound_from_letter","letter":"A","options":["A","B","C","D"],"correct":"A"},
+  {"type":"letter_from_sound","letter":"B","options":["A","B","C","D"],"correct":"B"},
+  {"type":"match_letter_sound","pairs":["C","D","E"]}
+]`,
+    2: `Generate exactly 10 letter tracing tasks for children at level ${level}/30. Levels 1-10: uppercase A-Z, 11-20: lowercase a-z, 21-30: mixed. Return ONLY JSON array:\n[{"type":"trace","letter":"A"}]`,
+    3: `Generate exactly 10 pictorial word-building questions for children at level ${level}/30. Levels 1-10: 3-letter words, 11-20: 4-letter, 21-30: longer with hints. Return ONLY JSON array:\n[{"type":"pictorial_full","word":"DOG","img":"dog","jumbled":["G","O","D"],"hint":[]}]`
   };
   const res = await groq.chat.completions.create({
     model: 'llama3-8b-8192',
     messages: [
-      { role: 'system', content: 'Return only valid JSON arrays, no markdown.' },
+      { role: 'system', content: 'You are a children\'s educational question generator. Return only valid JSON arrays, no markdown, no explanation.' },
       { role: 'user', content: prompts[chapter] }
     ],
-    temperature: 0.7, max_tokens: 2000,
+    temperature: 0.9,
+    max_tokens: 2000,
   });
   const text = res.choices[0].message.content.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   const questions = JSON.parse(text);
@@ -129,7 +146,8 @@ module.exports = async (req, res) => {
       return res.status(404).json({ error: 'Not found' });
 
     const key = `${chapter}_${level}`;
-    if (cache.has(key)) return res.json(cache.get(key));
+    // Don't cache Ch1 — always fresh AI questions
+    if (cache.has(key) && chapter !== 1) return res.json(cache.get(key));
 
     try {
       if (process.env.GROQ_API_KEY) {

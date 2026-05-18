@@ -149,10 +149,19 @@ body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; overflow: hidden;
 .speaker-icon { font-size: 1.8rem; } .opt-letter { font-size: 1.1rem; }
 .play-btn { font-size: 1.4rem; padding: 16px 40px; background: linear-gradient(135deg, var(--yellow), var(--orange)); }
 .submit-btn { font-size: 1.1rem; padding: 14px 36px; background: linear-gradient(135deg, #22c55e, #16a34a); }
-.match-table { display: flex; gap: 20px; align-items: center; justify-content: center; }
-.match-col { display: flex; flex-direction: column; gap: 10px; }
-.match-letter { padding: 12px 20px; font-size: 1.2rem; background: linear-gradient(135deg, var(--orange), var(--yellow)); cursor: default; }
-.match-sound { padding: 12px 20px; font-size: 1.4rem; background: linear-gradient(135deg, var(--blue), var(--purple)); }
+.match-table { display: flex; gap: 20px; align-items: flex-start; justify-content: center; }
+.match-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.match-col-label { font-size: 0.85rem; font-weight: 900; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+.match-letter { padding: 12px 20px; font-size: 1.2rem; background: linear-gradient(135deg, var(--orange), var(--yellow)); }
+.match-sound { padding: 12px 20px; font-size: 1.1rem; background: linear-gradient(135deg, var(--blue), var(--purple)); }
+.match-selected { background: linear-gradient(135deg, #ec4899, #a855f7) !important; transform: scale(1.1); box-shadow: 0 0 20px rgba(236,72,153,0.5) !important; }
+.match-done { background: linear-gradient(135deg, #22c55e, #16a34a) !important; opacity: 0.7; }
+.match-hint { font-size: 1rem; color: var(--purple); font-weight: bold; text-align: center; background: #f3e8ff; padding: 8px 16px; border-radius: 50px; }
+.match-progress { font-size: 0.9rem; color: var(--green); font-weight: bold; }
+.q-sublabel { font-size: 0.85rem; color: #9ca3af; }
+.loading-box { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: auto; }
+.loading-cat { font-size: 4rem; animation: catBounce 0.6s ease infinite alternate; }
+.loading-text { font-size: 1.2rem; color: var(--purple); font-weight: bold; }
 
 /* Trace */
 .trace-letter-label { font-size: 1.4rem; font-weight: 900; color: var(--purple); text-align: center; }
