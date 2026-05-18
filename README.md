@@ -1,62 +1,73 @@
-# Edu-Cat 🐱
+# React + TypeScript + Vite
 
-A children's phonics learning app built with React, TypeScript, and Node.js.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-- 🔐 Firebase Authentication (Email/Password + Google)
-- 📖 Chapter 1: Phonics — letter sounds (30 levels)
-- ✏️ Chapter 2: Letter Tracing (30 levels)
-- 🖼️ Chapter 3: Pictorial Word Building (30 levels)
-- 🤖 AI-generated questions via Groq (with static fallback)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Project Structure
+## React Compiler
 
-```
-Edu-Cat/
-├── frontend/       # React + TypeScript + Vite
-├── backend/        # Express API (questions + progress)
-└── vercel.json     # Deployment config
-```
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Getting Started
+## Expanding the ESLint configuration
 
-### Prerequisites
-- Node.js 18+
-- Firebase project with Authentication enabled
-- Groq API key (optional — static fallback works without it)
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### Backend
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-```bash
-cd backend
-npm install
-cp .env.example .env   # add your GROQ_API_KEY
-npm run dev
-```
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Environment Variables
-
-### `backend/.env`
-```
-GROQ_API_KEY=your_groq_api_key
-PORT=3000
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Deployment
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Deployed on Vercel. The `vercel.json` at the root handles both frontend build and API routing.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## Tech Stack
-
-- **Frontend**: React 18, TypeScript, Vite, Firebase Auth
-- **Backend**: Node.js, Express, Groq SDK
-- **Deployment**: Vercel
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
