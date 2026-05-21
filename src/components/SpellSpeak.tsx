@@ -77,40 +77,32 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
     const s = spoken.toUpperCase().trim();
     const t = target.toUpperCase().trim();
 
-    if (q.type === 'pronounce') {
-      // Speech recognition returns words not letters
-      // e.g. saying "A" may return "a", "hey", "the letter a", "ay"
-      // Check multiple ways the letter sound could be recognised
+    // Single letter mode (levels 1-10)
+    if (t.length === 1) {
       if (s === t) return 100;
-      if (s.startsWith(t + ' ') || s.endsWith(' ' + t) || s.includes(' ' + t + ' ')) return 100;
-      // "the letter X" or "letter X"
-      if (s.includes('LETTER ' + t) || s.includes(t + ' IS')) return 100;
-      // First word matches
       const firstWord = s.split(' ')[0];
       if (firstWord === t) return 100;
-      // Single char spoken matches
       if (s.replace(/\s/g, '') === t) return 100;
-      // Phonetic map for tricky letters
       const PHONETIC: Record<string, string[]> = {
         A: ['AY','EY','HEY','A'], B: ['BEE','BE'], C: ['SEE','CEE','SEA'],
         D: ['DEE','DI'], E: ['EE','EH'], F: ['EF','EFF'],
-        G: ['GEE','JEE'], H: ['AITCH','HAITCH','HEY'],
-        I: ['EYE','AYE','I'], J: ['JAY','JEY'], K: ['KAY','KEY'],
+        G: ['GEE','JEE'], H: ['AITCH','HAITCH'],
+        I: ['EYE','AYE'], J: ['JAY'], K: ['KAY','KEY'],
         L: ['EL','ELL'], M: ['EM','EMM'], N: ['EN','INN'],
-        O: ['OH','OW','O'], P: ['PEE','PI'], Q: ['CUE','KYU','QUE'],
+        O: ['OH','OW'], P: ['PEE','PI'], Q: ['CUE','KYU','QUE'],
         R: ['AR','ARE'], S: ['ESS','ES'], T: ['TEE','TI'],
-        U: ['YOU','YEW','EWE','U'], V: ['VEE','VI'],
+        U: ['YOU','YEW','EWE'], V: ['VEE','VI'],
         W: ['DOUBLE YOU','DOUBLE U'], X: ['EX','ECKS'],
-        Y: ['WHY','WYE'], Z: ['ZEE','ZED','ZI'],
+        Y: ['WHY','WYE'], Z: ['ZEE','ZED'],
       };
       const alts = PHONETIC[t] || [];
       if (alts.some(alt => s.includes(alt))) return 100;
-      // Partial — first letter matches
-      if (firstWord[0] === t[0]) return 65;
+      if (s.includes('LETTER ' + t)) return 100;
+      if (firstWord[0] === t[0]) return 70;
       return 20;
     }
 
-    // Spell mode — letter by letter
+    // Word spell mode (levels 11-30) — letter by letter
     const spokenChars = s.replace(/\s+/g, '').split('');
     const targetChars = t.split('');
     let matches = 0;
@@ -137,13 +129,11 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
       setHint(e.error === 'no-speech' ? '🔇 No speech detected. Try again!' : '❌ Mic error. Try again!');
     };
     recog.onresult = (e: SpeechRecognitionEvent) => {
-      const transcript = e.results[0][0].transcript;
+      const t = q.target;
       setHeard(transcript);
-      const acc = calcAccuracy(transcript, q.target);
+      const acc = calcAccuracy(transcript, t);
       setAccuracy(acc);
-      if (q.type === 'spell') {
-        setSpokenLetters(transcript.toUpperCase().replace(/\s+/g, '').split(''));
-      }
+      setSpokenLetters(transcript.toUpperCase().replace(/\s+/g, '').split(''));
       const ok = acc >= 80;
       if (ok) {
         setScore(s => s + 1);
@@ -151,13 +141,8 @@ export default function SpellSpeak({ level, onLevels, onNextLevel, onComplete }:
         setTimeout(() => setFeedback(true), 400);
       } else {
         speak('Try again! You can do it!', 0.9);
-        if (q.type === 'pronounce') {
-          setHint(`💡 You said "${transcript}". Try saying the letter sound clearly!`);
-          // Don't show feedback overlay for pronounce — let them retry
-        } else {
-          setHint(`💡 You said "${transcript}". Expected "${q.target}". Try again!`);
-          setTimeout(() => setFeedback(false), 400);
-        }
+        setHint(`💡 You said "${transcript}". ${q.target.length === 1 ? 'Try saying the letter sound clearly!' : `Expected "${q.target}". Try again!`}`);
+        // For wrong answers always allow retry without overlay
       }
     };
     recog.start();
